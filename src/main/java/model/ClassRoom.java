@@ -1,4 +1,8 @@
-package model;
+﻿package model;
 
+/**
+ * ClassRoom
+ */
 public class ClassRoom {
+
 }

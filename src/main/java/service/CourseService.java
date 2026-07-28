@@ -1,4 +1,8 @@
-package service;
+﻿package service;
 
+/**
+ * CourseService
+ */
 public class CourseService {
+
 }

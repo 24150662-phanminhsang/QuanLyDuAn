@@ -1,10 +1,10 @@
 ﻿package dao;
 
 /**
- * CourseDAO
+ * GradeDAO
  *
  * TODO: Implement later.
  */
-public interface CourseDAO {
+public interface GradeDAO {
 
 }

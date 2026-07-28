@@ -1,4 +1,10 @@
-package dao;
+﻿package dao;
 
-public class StudentDAO {
+/**
+ * StudentDAO
+ *
+ * TODO: Implement later.
+ */
+public interface StudentDAO {
+
 }

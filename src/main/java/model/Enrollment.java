@@ -1,4 +1,8 @@
-package model;
+﻿package model;
 
+/**
+ * Enrollment
+ */
 public class Enrollment {
+
 }

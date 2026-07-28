@@ -1,8 +1,8 @@
 ﻿package model;
 
 /**
- * User
+ * Role
  */
-public class User {
+public class Role {
 
 }

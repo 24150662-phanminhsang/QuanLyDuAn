@@ -1,4 +1,8 @@
-package util;
+﻿package util;
 
+/**
+ * DBConnection
+ */
 public class DBConnection {
+
 }

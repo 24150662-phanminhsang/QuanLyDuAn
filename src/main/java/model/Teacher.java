@@ -1,4 +1,8 @@
-package model;
+﻿package model;
 
+/**
+ * Teacher
+ */
 public class Teacher {
+
 }
