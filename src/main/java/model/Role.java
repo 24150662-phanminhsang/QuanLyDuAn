@@ -1,8 +1,7 @@
-﻿package model;
+package model;
 
-/**
- * Role
- */
-public class Role {
-
+public enum Role {
+    ADMIN,
+    TEACHER,
+    STUDENT
 }
