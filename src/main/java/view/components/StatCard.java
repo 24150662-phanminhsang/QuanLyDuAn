@@ -7,12 +7,17 @@ import util.UIConstants;
 
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.SwingConstants;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
+import java.text.NumberFormat;
+import java.util.Locale;
 
 public class StatCard extends ContentCard {
 
     private final JLabel valueLabel;
+    private final NumberFormat numberFormat;
 
     public StatCard(
             String title,
@@ -21,22 +26,125 @@ public class StatCard extends ContentCard {
             Color iconColor,
             Color iconBackground
     ) {
+        numberFormat = NumberFormat.getIntegerInstance(
+                new Locale("vi", "VN")
+        );
+
+        valueLabel = new JLabel("0");
+
+        initializeView(
+                title,
+                description,
+                icon,
+                iconColor,
+                iconBackground
+        );
+    }
+
+    private void initializeView(
+            String title,
+            String description,
+            Ikon icon,
+            Color iconColor,
+            Color iconBackground
+    ) {
         setLayout(
                 new MigLayout(
-                        "fill, insets 15",
-                        "46![grow]",
-                        "[][grow][]"
+                        "fill, wrap 1, insets 14 15",
+                        "[grow, fill]",
+                        "[]10[]4[]"
                 )
         );
 
-        /*
-         * Chỉ đặt kích thước tối thiểu.
-         * Không ép card quá rộng.
-         */
         setMinimumSize(
-                new Dimension(145, 130)
+                new Dimension(145, 128)
         );
 
+        setPreferredSize(
+                new Dimension(190, 135)
+        );
+
+        add(
+                createHeaderPanel(
+                        title,
+                        icon,
+                        iconColor,
+                        iconBackground
+                ),
+                "growx"
+        );
+
+        configureValueLabel();
+
+        add(
+                valueLabel,
+                "growx"
+        );
+
+        add(
+                createDescriptionLabel(description),
+                "growx"
+        );
+    }
+
+    private JPanel createHeaderPanel(
+            String title,
+            Ikon icon,
+            Color iconColor,
+            Color iconBackground
+    ) {
+        JPanel headerPanel = new JPanel(
+                new MigLayout(
+                        "fillx, insets 0",
+                        "[grow, fill]8[40!]",
+                        "[center]"
+                )
+        );
+
+        headerPanel.setOpaque(false);
+
+        JLabel titleLabel = new JLabel(
+                safeText(title, "Thống kê")
+        );
+
+        titleLabel.setFont(
+                UIConstants.FONT_NORMAL.deriveFont(
+                        Font.BOLD
+                )
+        );
+
+        titleLabel.setForeground(
+                UIConstants.TEXT_PRIMARY
+        );
+
+        titleLabel.setToolTipText(
+                safeText(title, "Thống kê")
+        );
+
+        JPanel iconPanel = createIconPanel(
+                icon,
+                iconColor,
+                iconBackground
+        );
+
+        headerPanel.add(
+                titleLabel,
+                "growx"
+        );
+
+        headerPanel.add(
+                iconPanel,
+                "width 40!, height 40!, align right"
+        );
+
+        return headerPanel;
+    }
+
+    private JPanel createIconPanel(
+            Ikon icon,
+            Color iconColor,
+            Color iconBackground
+    ) {
         JPanel iconPanel = new JPanel(
                 new MigLayout(
                         "fill, insets 0",
@@ -45,39 +153,49 @@ public class StatCard extends ContentCard {
                 )
         );
 
-        iconPanel.setBackground(iconBackground);
+        iconPanel.setBackground(
+                iconBackground == null
+                        ? UIConstants.PRIMARY_LIGHT
+                        : iconBackground
+        );
+
+        iconPanel.setMinimumSize(
+                new Dimension(40, 40)
+        );
+
+        iconPanel.setPreferredSize(
+                new Dimension(40, 40)
+        );
 
         iconPanel.putClientProperty(
                 "FlatLaf.style",
-                "arc: 999"
+                """
+                arc: 999;
+                borderWidth: 0;
+                """
         );
 
-        JLabel iconLabel = new JLabel(
-                FontIcon.of(
-                        icon,
-                        21,
-                        iconColor
-                )
-        );
+        if (icon != null) {
+            JLabel iconLabel = new JLabel(
+                    FontIcon.of(
+                            icon,
+                            19,
+                            iconColor == null
+                                    ? UIConstants.PRIMARY
+                                    : iconColor
+                    )
+            );
 
-        iconPanel.add(
-                iconLabel,
-                "width 44!, height 44!"
-        );
+            iconPanel.add(
+                    iconLabel,
+                    "align center"
+            );
+        }
 
-        JLabel titleLabel =
-                new JLabel(title);
+        return iconPanel;
+    }
 
-        titleLabel.setFont(
-                UIConstants.FONT_NORMAL
-        );
-
-        titleLabel.setForeground(
-                UIConstants.TEXT_PRIMARY
-        );
-
-        valueLabel = new JLabel("0");
-
+    private void configureValueLabel() {
         valueLabel.setFont(
                 UIConstants.FONT_STATISTIC
         );
@@ -86,8 +204,22 @@ public class StatCard extends ContentCard {
                 UIConstants.TEXT_PRIMARY
         );
 
-        JLabel descriptionLabel =
-                new JLabel(description);
+        valueLabel.setHorizontalAlignment(
+                SwingConstants.LEFT
+        );
+
+        valueLabel.setToolTipText("0");
+    }
+
+    private JLabel createDescriptionLabel(
+            String description
+    ) {
+        JLabel descriptionLabel = new JLabel(
+                safeText(
+                        description,
+                        "Thông tin hệ thống"
+                )
+        );
 
         descriptionLabel.setFont(
                 UIConstants.FONT_SMALL
@@ -97,30 +229,46 @@ public class StatCard extends ContentCard {
                 UIConstants.TEXT_SECONDARY
         );
 
-        add(
-                iconPanel,
-                "cell 0 0 1 2, width 44!, height 44!"
+        descriptionLabel.setToolTipText(
+                safeText(
+                        description,
+                        "Thông tin hệ thống"
+                )
         );
 
-        add(
-                titleLabel,
-                "cell 1 0, growx"
-        );
-
-        add(
-                valueLabel,
-                "cell 1 1, growx"
-        );
-
-        add(
-                descriptionLabel,
-                "cell 0 2 2 1, growx"
-        );
+        return descriptionLabel;
     }
 
     public void setValue(int value) {
-        valueLabel.setText(
-                String.valueOf(value)
-        );
+        setValue((long) value);
+    }
+
+    public void setValue(long value) {
+        long safeValue = Math.max(0, value);
+
+        String formattedValue =
+                numberFormat.format(safeValue);
+
+        valueLabel.setText(formattedValue);
+        valueLabel.setToolTipText(formattedValue);
+    }
+
+    public void setValue(String value) {
+        String displayValue =
+                value == null || value.isBlank()
+                        ? "0"
+                        : value.trim();
+
+        valueLabel.setText(displayValue);
+        valueLabel.setToolTipText(displayValue);
+    }
+
+    private String safeText(
+            String value,
+            String defaultValue
+    ) {
+        return value == null || value.isBlank()
+                ? defaultValue
+                : value.trim();
     }
 }

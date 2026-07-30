@@ -8,6 +8,7 @@ import util.UIConstants;
 import view.components.NotificationPopup;
 import view.components.SidebarButton;
 import view.components.SidebarPanel;
+import controller.DashboardController;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -22,57 +23,50 @@ import javax.swing.WindowConstants;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AdminDashboardView
-        extends JFrame {
+public class AdminDashboardView extends JFrame {
 
-    private static final String DASHBOARD_CARD =
-            "DASHBOARD";
+    private static final String DASHBOARD_CARD = "DASHBOARD";
+    private static final String USERS_CARD = "USERS";
+    private static final String STUDENTS_CARD = "STUDENTS";
+    private static final String COURSES_CARD = "COURSES";
 
-    private static final String USERS_CARD =
-            "USERS";
+    private static final int DASHBOARD_MENU_INDEX = 0;
+    private static final int USERS_MENU_INDEX = 1;
+    private static final int STUDENTS_MENU_INDEX = 2;
+    private static final int COURSES_MENU_INDEX = 4;
 
     private final CardLayout cardLayout;
     private final JPanel contentPanel;
 
-    private final NotificationService
-            notificationService;
+    private final NotificationService notificationService;
+    private final NotificationPopup notificationPopup;
 
-    private final NotificationPopup
-            notificationPopup;
+    private final StatisticsView statisticsView;
+    private final UserManagementView userManagementView;
+    private final StudentManagementView studentManagementView;
+    private final CourseManagementView courseManagementView;
 
-    private final StatisticsView
-            statisticsView;
-
-    private final UserManagementView
-            userManagementView;
-
-    private final StudentManagementView
-            studentManagementView;
-    private final TeacherManagementView
-            teacherManagementView;
-    private final CourseManagementView
-            courseManagementView;
-    private final ClassManagementView
-            classManagementView;
-    private final PaymentManagementView
-            paymentManagementView;
-    private final List<SidebarButton>
-            menuButtons;
+    private final List<SidebarButton> menuButtons;
 
     private JScrollPane sidebarScrollPane;
-
     private JLabel pageTitleLabel;
     private JButton notificationButton;
 
     public AdminDashboardView() {
         cardLayout = new CardLayout();
 
-        contentPanel =
-                new JPanel(cardLayout);
+        contentPanel = new JPanel(
+                cardLayout
+        );
+
+        contentPanel.setBackground(
+                UIConstants.BACKGROUND
+        );
 
         notificationService =
                 new NotificationService();
@@ -89,26 +83,38 @@ public class AdminDashboardView
 
         userManagementView =
                 new UserManagementView();
-        studentManagementView = new StudentManagementView();
-        teacherManagementView = new TeacherManagementView();
-        courseManagementView = new CourseManagementView();
-        classManagementView = new ClassManagementView();
-        paymentManagementView = new PaymentManagementView();
 
-        menuButtons =
-                new ArrayList<>();
+        studentManagementView =
+                new StudentManagementView();
 
-        statisticsView
-                .setQuickActionHandler(
-                        this::handleQuickAction
-                );
+        courseManagementView =
+                new CourseManagementView();
 
-        notificationPopup
-                .setChangeListener(
-                        this::refreshNotifications
-                );
+        /*
+         * Admin được phép thêm, sửa và xóa khóa học.
+         */
+        courseManagementView.setManagementMode(
+                true
+        );
 
+        new DashboardController(
+                courseManagementView
+        );
+
+        menuButtons = new ArrayList<>();
+
+        registerComponentEvents();
         initializeFrame();
+    }
+
+    private void registerComponentEvents() {
+        statisticsView.setQuickActionHandler(
+                this::handleQuickAction
+        );
+
+        notificationPopup.setChangeListener(
+                this::refreshNotifications
+        );
     }
 
     private void initializeFrame() {
@@ -121,10 +127,7 @@ public class AdminDashboardView
         );
 
         setMinimumSize(
-                new Dimension(
-                        930,
-                        600
-                )
+                new Dimension(930, 600)
         );
 
         setSize(1400, 800);
@@ -134,10 +137,9 @@ public class AdminDashboardView
                 JFrame.MAXIMIZED_BOTH
         );
 
-        JPanel rootPanel =
-                new JPanel(
-                        new BorderLayout()
-                );
+        JPanel rootPanel = new JPanel(
+                new BorderLayout()
+        );
 
         rootPanel.setBackground(
                 UIConstants.BACKGROUND
@@ -151,10 +153,9 @@ public class AdminDashboardView
                 BorderLayout.WEST
         );
 
-        JPanel rightPanel =
-                new JPanel(
-                        new BorderLayout()
-                );
+        JPanel rightPanel = new JPanel(
+                new BorderLayout()
+        );
 
         rightPanel.setBackground(
                 UIConstants.BACKGROUND
@@ -165,19 +166,7 @@ public class AdminDashboardView
                 BorderLayout.NORTH
         );
 
-        contentPanel.setBackground(
-                UIConstants.BACKGROUND
-        );
-
-        contentPanel.add(
-                createDashboardScrollPane(),
-                DASHBOARD_CARD
-        );
-
-        contentPanel.add(
-                userManagementView,
-                USERS_CARD
-        );
+        initializeContentCards();
 
         rightPanel.add(
                 contentPanel,
@@ -195,6 +184,34 @@ public class AdminDashboardView
         refreshNotifications();
     }
 
+    private void initializeContentCards() {
+        contentPanel.add(
+                createDashboardScrollPane(),
+                DASHBOARD_CARD
+        );
+
+        contentPanel.add(
+                createContentScrollPane(
+                        userManagementView
+                ),
+                USERS_CARD
+        );
+
+        contentPanel.add(
+                createContentScrollPane(
+                        studentManagementView
+                ),
+                STUDENTS_CARD
+        );
+
+        contentPanel.add(
+                createContentScrollPane(
+                        courseManagementView
+                ),
+                COURSES_CARD
+        );
+    }
+
     private JScrollPane createSidebarScrollPane() {
         SidebarPanel sidebar =
                 createSidebar();
@@ -207,22 +224,22 @@ public class AdminDashboardView
                 );
 
         /*
-         * Giảm sidebar còn 210 px.
+         * Giảm chiều rộng sidebar để phần nội dung bên phải
+         * có nhiều không gian hơn.
          */
         scrollPane.setPreferredSize(
-                new Dimension(210, 0)
+                new Dimension(205, 0)
         );
 
         scrollPane.setMinimumSize(
-                new Dimension(195, 0)
+                new Dimension(190, 0)
         );
 
         scrollPane.setBorder(null);
 
-        scrollPane.getViewport()
-                .setBackground(
-                        UIConstants.SIDEBAR
-                );
+        scrollPane.getViewport().setBackground(
+                UIConstants.SIDEBAR
+        );
 
         scrollPane
                 .getVerticalScrollBar()
@@ -252,24 +269,18 @@ public class AdminDashboardView
                 "growx"
         );
 
-        JLabel menuTitle =
-                new JLabel(
-                        "DANH MỤC QUẢN LÝ"
-                );
+        JLabel menuTitle = new JLabel(
+                "DANH MỤC QUẢN LÝ"
+        );
 
         menuTitle.setFont(
-                UIConstants.FONT_SMALL
-                        .deriveFont(
-                                java.awt.Font.BOLD
-                        )
+                UIConstants.FONT_SMALL.deriveFont(
+                        java.awt.Font.BOLD
+                )
         );
 
         menuTitle.setForeground(
-                new Color(
-                        148,
-                        163,
-                        184
-                )
+                new Color(148, 163, 184)
         );
 
         sidebar.add(
@@ -291,7 +302,7 @@ public class AdminDashboardView
 
         SidebarButton studentButton =
                 createMenuButton(
-                        "Quản lý sinh viên",
+                        "Quản lý học viên",
                         FontAwesomeSolid.USER_GRADUATE
                 );
 
@@ -333,12 +344,39 @@ public class AdminDashboardView
                 event -> showUsers()
         );
 
-        studentButton.setPending(true);
+        studentButton.addActionListener(
+                event -> showStudents()
+        );
+
+        courseButton.addActionListener(
+                event -> showCourses()
+        );
+
+        teacherButton.addActionListener(
+                event -> showPendingFeature(
+                        "Quản lý giảng viên"
+                )
+        );
+
+        classButton.addActionListener(
+                event -> showPendingFeature(
+                        "Quản lý lớp học"
+                )
+        );
+
+        paymentButton.addActionListener(
+                event -> showPendingFeature(
+                        "Quản lý thanh toán"
+                )
+        );
+
+        reportButton.addActionListener(
+                event -> showDashboard()
+        );
+
         teacherButton.setPending(true);
-        courseButton.setPending(true);
         classButton.setPending(true);
         paymentButton.setPending(true);
-        reportButton.setPending(true);
 
         sidebar.add(dashboardButton);
         sidebar.add(userButton);
@@ -358,28 +396,27 @@ public class AdminDashboardView
     }
 
     private JPanel createLogoPanel() {
-        JPanel panel =
-                new JPanel(
-                        new MigLayout(
-                                "fillx, insets 1",
-                                "29![grow]",
-                                "[][]"
-                        )
-                );
+        JPanel panel = new JPanel(
+                new MigLayout(
+                        "fillx, insets 1",
+                        "29![grow]",
+                        "[][]"
+                )
+        );
 
         panel.setOpaque(false);
 
-        JLabel icon =
-                new JLabel(
-                        FontIcon.of(
-                                FontAwesomeSolid.GRADUATION_CAP,
-                                22,
-                                UIConstants.PRIMARY
-                        )
-                );
+        JLabel icon = new JLabel(
+                FontIcon.of(
+                        FontAwesomeSolid.GRADUATION_CAP,
+                        22,
+                        UIConstants.PRIMARY
+                )
+        );
 
-        JLabel name =
-                new JLabel("CourseManager");
+        JLabel name = new JLabel(
+                "CourseManager"
+        );
 
         name.setFont(
                 new java.awt.Font(
@@ -393,21 +430,16 @@ public class AdminDashboardView
                 Color.WHITE
         );
 
-        JLabel subtitle =
-                new JLabel(
-                        "Quản lý khóa học"
-                );
+        JLabel subtitle = new JLabel(
+                "Quản lý khóa học"
+        );
 
         subtitle.setFont(
                 UIConstants.FONT_SMALL
         );
 
         subtitle.setForeground(
-                new Color(
-                        203,
-                        213,
-                        225
-                )
+                new Color(203, 213, 225)
         );
 
         panel.add(
@@ -444,14 +476,13 @@ public class AdminDashboardView
     }
 
     private JPanel createAccountPanel() {
-        JPanel panel =
-                new JPanel(
-                        new MigLayout(
-                                "fillx, wrap 1, insets 7",
-                                "[grow, center]",
-                                "[]2[]0[]0[]3[]"
-                        )
-                );
+        JPanel panel = new JPanel(
+                new MigLayout(
+                        "fillx, wrap 1, insets 7",
+                        "[grow, center]",
+                        "[]2[]0[]0[]3[]"
+                )
+        );
 
         panel.setBackground(
                 UIConstants.SIDEBAR_SECONDARY
@@ -465,19 +496,17 @@ public class AdminDashboardView
                 """
         );
 
-        JLabel avatar =
-                new JLabel(
-                        FontIcon.of(
-                                FontAwesomeSolid.USER_CIRCLE,
-                                24,
-                                Color.WHITE
-                        )
-                );
+        JLabel avatar = new JLabel(
+                FontIcon.of(
+                        FontAwesomeSolid.USER_CIRCLE,
+                        24,
+                        Color.WHITE
+                )
+        );
 
-        JLabel name =
-                new JLabel(
-                        "Quản trị viên"
-                );
+        JLabel name = new JLabel(
+                "Quản trị viên"
+        );
 
         name.setFont(
                 UIConstants.FONT_MEDIUM
@@ -487,50 +516,38 @@ public class AdminDashboardView
                 Color.WHITE
         );
 
-        JLabel username =
-                new JLabel("admin");
+        JLabel username = new JLabel(
+                "admin"
+        );
 
         username.setFont(
                 UIConstants.FONT_SMALL
         );
 
         username.setForeground(
-                new Color(
-                        203,
-                        213,
-                        225
-                )
+                new Color(203, 213, 225)
         );
 
-        JLabel online =
-                new JLabel("● Online");
+        JLabel online = new JLabel(
+                "● Online"
+        );
 
         online.setFont(
                 UIConstants.FONT_SMALL
         );
 
         online.setForeground(
-                new Color(
-                        74,
-                        222,
-                        128
-                )
+                new Color(74, 222, 128)
         );
 
         JButton logoutButton =
-                new JButton(
-                        "Đăng xuất"
-                );
+                new JButton("Đăng xuất");
 
         logoutButton.setIcon(
                 FontIcon.of(
                         FontAwesomeSolid.SIGN_OUT_ALT,
                         11,
-                        new Color(
-                                248,
-                                113,
-                                113
-                        )
+                        new Color(248, 113, 113)
                 )
         );
 
@@ -539,11 +556,7 @@ public class AdminDashboardView
         );
 
         logoutButton.setForeground(
-                new Color(
-                        248,
-                        113,
-                        113
-                )
+                new Color(248, 113, 113)
         );
 
         logoutButton.setBackground(
@@ -552,6 +565,12 @@ public class AdminDashboardView
 
         logoutButton.setFocusable(false);
         logoutButton.setBorderPainted(false);
+
+        logoutButton.setCursor(
+                Cursor.getPredefinedCursor(
+                        Cursor.HAND_CURSOR
+                )
+        );
 
         logoutButton.addActionListener(
                 event -> confirmLogout()
@@ -571,28 +590,26 @@ public class AdminDashboardView
     }
 
     private JPanel createHeader() {
-        JPanel header =
-                new JPanel(
-                        new MigLayout(
-                                "fillx, insets 11 16",
-                                "[][grow][][]",
-                                "[center]"
-                        )
-                );
+        JPanel header = new JPanel(
+                new MigLayout(
+                        "fillx, insets 11 16",
+                        "[][grow][][]",
+                        "[center]"
+                )
+        );
 
         header.setBackground(
                 Color.WHITE
         );
 
         header.setBorder(
-                BorderFactory
-                        .createMatteBorder(
-                                0,
-                                0,
-                                1,
-                                0,
-                                UIConstants.BORDER
-                        )
+                BorderFactory.createMatteBorder(
+                        0,
+                        0,
+                        1,
+                        0,
+                        UIConstants.BORDER
+                )
         );
 
         JButton menuButton =
@@ -610,14 +627,19 @@ public class AdminDashboardView
         menuButton.setContentAreaFilled(false);
         menuButton.setFocusable(false);
 
+        menuButton.setCursor(
+                Cursor.getPredefinedCursor(
+                        Cursor.HAND_CURSOR
+                )
+        );
+
         menuButton.addActionListener(
                 event -> toggleSidebar()
         );
 
-        pageTitleLabel =
-                new JLabel(
-                        "Tổng quan hệ thống"
-                );
+        pageTitleLabel = new JLabel(
+                "Tổng quan hệ thống"
+        );
 
         pageTitleLabel.setFont(
                 UIConstants.FONT_TITLE
@@ -638,25 +660,24 @@ public class AdminDashboardView
                 )
         );
 
-        notificationButton
-                .setHorizontalTextPosition(
-                        SwingConstants.RIGHT
-                );
+        notificationButton.setHorizontalTextPosition(
+                SwingConstants.RIGHT
+        );
 
-        notificationButton
-                .setBorderPainted(false);
+        notificationButton.setIconTextGap(2);
+        notificationButton.setBorderPainted(false);
+        notificationButton.setContentAreaFilled(false);
+        notificationButton.setFocusable(false);
 
-        notificationButton
-                .setContentAreaFilled(false);
+        notificationButton.setCursor(
+                Cursor.getPredefinedCursor(
+                        Cursor.HAND_CURSOR
+                )
+        );
 
-        notificationButton
-                .setFocusable(false);
-
-        notificationButton
-                .addActionListener(
-                        event ->
-                                showNotificationPopup()
-                );
+        notificationButton.addActionListener(
+                event -> showNotificationPopup()
+        );
 
         header.add(menuButton);
 
@@ -672,37 +693,39 @@ public class AdminDashboardView
     }
 
     private JPanel createHeaderAccountPanel() {
-        JPanel panel =
-                new JPanel(
-                        new MigLayout(
-                                "insets 0",
-                                "30![grow]",
-                                "[][]"
-                        )
-                );
+        JPanel panel = new JPanel(
+                new MigLayout(
+                        "insets 0",
+                        "30![grow]",
+                        "[][]"
+                )
+        );
 
         panel.setOpaque(false);
 
-        JLabel avatar =
-                new JLabel(
-                        FontIcon.of(
-                                FontAwesomeSolid.USER_CIRCLE,
-                                27,
-                                UIConstants.PRIMARY
-                        )
-                );
+        JLabel avatar = new JLabel(
+                FontIcon.of(
+                        FontAwesomeSolid.USER_CIRCLE,
+                        27,
+                        UIConstants.PRIMARY
+                )
+        );
 
-        JLabel name =
-                new JLabel(
-                        "Quản trị viên"
-                );
+        JLabel name = new JLabel(
+                "Quản trị viên"
+        );
 
         name.setFont(
                 UIConstants.FONT_MEDIUM
         );
 
-        JLabel username =
-                new JLabel("admin");
+        name.setForeground(
+                UIConstants.TEXT_PRIMARY
+        );
+
+        JLabel username = new JLabel(
+                "admin"
+        );
 
         username.setFont(
                 UIConstants.FONT_SMALL
@@ -731,19 +754,26 @@ public class AdminDashboardView
     }
 
     private JScrollPane createDashboardScrollPane() {
+        return createContentScrollPane(
+                statisticsView
+        );
+    }
+
+    private JScrollPane createContentScrollPane(
+            JPanel view
+    ) {
         JScrollPane scrollPane =
                 new JScrollPane(
-                        statisticsView,
+                        view,
                         ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
                         ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
                 );
 
         scrollPane.setBorder(null);
 
-        scrollPane.getViewport()
-                .setBackground(
-                        UIConstants.BACKGROUND
-                );
+        scrollPane.getViewport().setBackground(
+                UIConstants.BACKGROUND
+        );
 
         scrollPane
                 .getVerticalScrollBar()
@@ -757,37 +787,43 @@ public class AdminDashboardView
 
         notificationPopup.show(
                 notificationButton,
-                notificationButton.getWidth()
-                        - 390,
-                notificationButton.getHeight()
+                notificationButton.getWidth() - 410,
+                notificationButton.getHeight() + 6
         );
     }
 
     private void refreshNotifications() {
         int unreadCount =
-                notificationService
-                        .countUnread();
+                notificationService.countUnread();
 
         notificationButton.setText(
                 unreadCount > 0
-                        ? String.valueOf(
-                        unreadCount
-                )
+                        ? String.valueOf(unreadCount)
                         : ""
         );
 
         notificationButton.setForeground(
-                UIConstants.DANGER
+                unreadCount > 0
+                        ? UIConstants.DANGER
+                        : UIConstants.TEXT_PRIMARY
         );
 
-        statisticsView
-                .refreshActivities();
+        notificationButton.setToolTipText(
+                unreadCount > 0
+                        ? unreadCount
+                        + " thông báo chưa đọc"
+                        : "Không có thông báo chưa đọc"
+        );
+
+        statisticsView.refreshActivities();
     }
 
     private void toggleSidebar() {
+        boolean visible =
+                sidebarScrollPane.isVisible();
+
         sidebarScrollPane.setVisible(
-                !sidebarScrollPane
-                        .isVisible()
+                !visible
         );
 
         revalidate();
@@ -795,8 +831,6 @@ public class AdminDashboardView
     }
 
     private void showDashboard() {
-        statisticsView.loadStatistics();
-
         cardLayout.show(
                 contentPanel,
                 DASHBOARD_CARD
@@ -806,12 +840,14 @@ public class AdminDashboardView
                 "Tổng quan hệ thống"
         );
 
-        selectMenuButton(0);
+        selectMenuButton(
+                DASHBOARD_MENU_INDEX
+        );
+
+        statisticsView.loadStatistics();
     }
 
     private void showUsers() {
-        userManagementView.loadUsers();
-
         cardLayout.show(
                 contentPanel,
                 USERS_CARD
@@ -821,18 +857,82 @@ public class AdminDashboardView
                 "Quản lý tài khoản"
         );
 
-        selectMenuButton(1);
+        selectMenuButton(
+                USERS_MENU_INDEX
+        );
+
+        userManagementView.loadUsers();
+    }
+
+    private void showStudents() {
+        cardLayout.show(
+                contentPanel,
+                STUDENTS_CARD
+        );
+
+        pageTitleLabel.setText(
+                "Quản lý học viên"
+        );
+
+        selectMenuButton(
+                STUDENTS_MENU_INDEX
+        );
+    }
+
+    private void showCourses() {
+        cardLayout.show(
+                contentPanel,
+                COURSES_CARD
+        );
+
+        pageTitleLabel.setText(
+                "Quản lý khóa học"
+        );
+
+        selectMenuButton(
+                COURSES_MENU_INDEX
+        );
     }
 
     private void handleQuickAction(
             String actionKey
     ) {
         if (
-                "USERS".equals(
-                        actionKey
-                )
+                actionKey == null
+                        || actionKey.isBlank()
         ) {
-            showUsers();
+            return;
+        }
+
+        switch (actionKey.trim().toUpperCase()) {
+            case "USERS", "ADD_USER" ->
+                    showUsers();
+
+            case "STUDENTS", "ADD_STUDENT" ->
+                    showStudents();
+
+            case "COURSES", "ADD_COURSE" ->
+                    showCourses();
+
+            case "CLASSES" ->
+                    showPendingFeature(
+                            "Quản lý lớp học"
+                    );
+
+            case "PAYMENTS" ->
+                    showPendingFeature(
+                            "Quản lý thanh toán"
+                    );
+
+            case "REPORTS" ->
+                    showDashboard();
+
+            case "NOTIFICATIONS", "MESSAGES" ->
+                    showNotificationPopup();
+
+            default -> showPendingFeature(
+                    "Chức năng " + actionKey
+            );
         }
     }
 
@@ -844,12 +944,24 @@ public class AdminDashboardView
                 index < menuButtons.size();
                 index++
         ) {
-            menuButtons.get(index)
+            menuButtons
+                    .get(index)
                     .setMenuSelected(
-                            index
-                                    == selectedIndex
+                            index == selectedIndex
                     );
         }
+    }
+
+    private void showPendingFeature(
+            String featureName
+    ) {
+        JOptionPane.showMessageDialog(
+                this,
+                featureName
+                        + " đang được hoàn thiện.",
+                "Thông báo",
+                JOptionPane.INFORMATION_MESSAGE
+        );
     }
 
     private void confirmLogout() {
@@ -857,7 +969,7 @@ public class AdminDashboardView
                 JOptionPane.showConfirmDialog(
                         this,
                         "Bạn có chắc muốn đăng xuất?",
-                        "Xác nhận",
+                        "Xác nhận đăng xuất",
                         JOptionPane.YES_NO_OPTION,
                         JOptionPane.QUESTION_MESSAGE
                 );

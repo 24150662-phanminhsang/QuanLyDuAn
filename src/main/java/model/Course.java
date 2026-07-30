@@ -1,7 +1,8 @@
 package model;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.sql.Timestamp;
+import java.util.Locale;
 
 public class Course {
 
@@ -12,11 +13,21 @@ public class Course {
     private int credits;
     private BigDecimal tuitionFee;
     private String status;
-    private LocalDateTime createdAt;
+    private Timestamp createdAt;
 
+    /**
+     * Constructor mặc định.
+     */
     public Course() {
+        this.courseId = 0;
+        this.credits = 0;
+        this.tuitionFee = BigDecimal.ZERO;
+        this.status = "ACTIVE";
     }
 
+    /**
+     * Constructor đầy đủ.
+     */
     public Course(
             int courseId,
             String courseCode,
@@ -25,16 +36,39 @@ public class Course {
             int credits,
             BigDecimal tuitionFee,
             String status,
-            LocalDateTime createdAt
+            Timestamp createdAt
     ) {
         this.courseId = courseId;
-        this.courseCode = courseCode;
-        this.courseName = courseName;
-        this.description = description;
+        this.courseCode = normalizeText(courseCode);
+        this.courseName = normalizeText(courseName);
+        this.description = normalizeNullableText(description);
         this.credits = credits;
-        this.tuitionFee = tuitionFee;
-        this.status = status;
+        this.tuitionFee = normalizeTuitionFee(tuitionFee);
+        this.status = normalizeStatus(status);
         this.createdAt = createdAt;
+    }
+
+    /**
+     * Constructor dùng khi thêm khóa học mới.
+     */
+    public Course(
+            String courseCode,
+            String courseName,
+            String description,
+            int credits,
+            BigDecimal tuitionFee,
+            String status
+    ) {
+        this(
+                0,
+                courseCode,
+                courseName,
+                description,
+                credits,
+                tuitionFee,
+                status,
+                null
+        );
     }
 
     public int getCourseId() {
@@ -50,7 +84,7 @@ public class Course {
     }
 
     public void setCourseCode(String courseCode) {
-        this.courseCode = courseCode;
+        this.courseCode = normalizeText(courseCode);
     }
 
     public String getCourseName() {
@@ -58,7 +92,7 @@ public class Course {
     }
 
     public void setCourseName(String courseName) {
-        this.courseName = courseName;
+        this.courseName = normalizeText(courseName);
     }
 
     public String getDescription() {
@@ -66,7 +100,7 @@ public class Course {
     }
 
     public void setDescription(String description) {
-        this.description = description;
+        this.description = normalizeNullableText(description);
     }
 
     public int getCredits() {
@@ -82,7 +116,11 @@ public class Course {
     }
 
     public void setTuitionFee(BigDecimal tuitionFee) {
-        this.tuitionFee = tuitionFee;
+        this.tuitionFee = normalizeTuitionFee(tuitionFee);
+    }
+
+    public void setTuitionFee(double tuitionFee) {
+        this.tuitionFee = BigDecimal.valueOf(tuitionFee);
     }
 
     public String getStatus() {
@@ -90,19 +128,101 @@ public class Course {
     }
 
     public void setStatus(String status) {
-        this.status = status;
+        this.status = normalizeStatus(status);
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Timestamp getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
+    public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
+    }
+
+    /*
+     * Các hàm giữ lại để tương thích với code cũ.
+     */
+
+    public int getCourseID() {
+        return getCourseId();
+    }
+
+    public void setCourseID(int courseID) {
+        setCourseId(courseID);
+    }
+
+    public double getFee() {
+        return tuitionFee == null
+                ? 0.0
+                : tuitionFee.doubleValue();
+    }
+
+    public void setFee(double fee) {
+        setTuitionFee(fee);
+    }
+
+    public int getDuration() {
+        return getCredits();
+    }
+
+    public void setDuration(int duration) {
+        setCredits(duration);
+    }
+
+    /**
+     * Chuẩn hóa chuỗi bắt buộc.
+     */
+    private String normalizeText(String value) {
+        return value == null
+                ? ""
+                : value.trim();
+    }
+
+    /**
+     * Chuẩn hóa chuỗi có thể để trống.
+     */
+    private String normalizeNullableText(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        return value.trim();
+    }
+
+    /**
+     * Học phí null được chuyển thành 0.
+     */
+    private BigDecimal normalizeTuitionFee(
+            BigDecimal tuitionFee
+    ) {
+        return tuitionFee == null
+                ? BigDecimal.ZERO
+                : tuitionFee;
+    }
+
+    /**
+     * Trạng thái mặc định là ACTIVE.
+     */
+    private String normalizeStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return "ACTIVE";
+        }
+
+        return status
+                .trim()
+                .toUpperCase(Locale.ROOT);
     }
 
     @Override
     public String toString() {
-        return courseName;
+        String name = courseName == null
+                ? ""
+                : courseName;
+
+        if (courseCode == null || courseCode.isBlank()) {
+            return name;
+        }
+
+        return courseCode + " - " + name;
     }
 }

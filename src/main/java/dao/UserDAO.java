@@ -618,6 +618,44 @@ public class UserDAO {
     public boolean deleteById(int userId) throws SQLException {
         return delete(userId);
     }
+    /**
+     * Đăng nhập bằng username và mật khẩu chưa băm.
+     *
+     * @return User nếu đăng nhập thành công; null nếu sai thông tin.
+     */
+    public User login(
+            String username,
+            String rawPassword
+    ) throws SQLException {
+
+        if (username == null
+                || username.isBlank()
+                || rawPassword == null
+                || rawPassword.isBlank()) {
+            return null;
+        }
+
+        User user = findByUsername(username.trim());
+
+        if (user == null) {
+            return null;
+        }
+
+        boolean passwordCorrect = PasswordUtil.matches(
+                rawPassword,
+                user.getPasswordHash()
+        );
+
+        if (!passwordCorrect) {
+            return null;
+        }
+
+        if (user.getStatus() != AccountStatus.ACTIVE) {
+            return null;
+        }
+
+        return user;
+    }
 
     /**
      * Cập nhật trạng thái tài khoản.

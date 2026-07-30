@@ -22,8 +22,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.function.Consumer;
 
-public class StatisticsView
-        extends ScrollablePanel {
+public class StatisticsView extends ScrollablePanel {
 
     private final StatisticsController controller;
 
@@ -32,23 +31,19 @@ public class StatisticsView
 
     private final List<StatCard> cards;
 
-    private final RevenueChartPanel
-            revenueChartPanel;
-
-    private final ActivityPanel
-            activityPanel;
-
-    private final QuickActionPanel
-            quickActionPanel;
+    private final RevenueChartPanel revenueChartPanel;
+    private final ActivityPanel activityPanel;
+    private final QuickActionPanel quickActionPanel;
 
     private int currentCardColumns = -1;
     private int currentBottomColumns = -1;
 
+    private boolean loading;
+
     public StatisticsView(
             NotificationService notificationService
     ) {
-        controller =
-                new StatisticsController();
+        controller = new StatisticsController();
 
         cardsPanel = new JPanel();
         cardsPanel.setOpaque(false);
@@ -56,59 +51,53 @@ public class StatisticsView
         bottomPanel = new JPanel();
         bottomPanel.setOpaque(false);
 
-        StatCard usersCard =
-                new StatCard(
-                        "Tổng tài khoản",
-                        "Người dùng trong hệ thống",
-                        FontAwesomeSolid.USERS,
-                        UIConstants.PRIMARY,
-                        UIConstants.PRIMARY_LIGHT
-                );
+        StatCard usersCard = new StatCard(
+                "Tổng tài khoản",
+                "Người dùng trong hệ thống",
+                FontAwesomeSolid.USERS,
+                UIConstants.PRIMARY,
+                UIConstants.PRIMARY_LIGHT
+        );
 
-        StatCard activeCard =
-                new StatCard(
-                        "Đang hoạt động",
-                        "Tài khoản ACTIVE",
-                        FontAwesomeSolid.USER,
-                        UIConstants.SUCCESS,
-                        UIConstants.SUCCESS_LIGHT
-                );
+        StatCard activeCard = new StatCard(
+                "Đang hoạt động",
+                "Tài khoản ACTIVE",
+                FontAwesomeSolid.USER_CHECK,
+                UIConstants.SUCCESS,
+                UIConstants.SUCCESS_LIGHT
+        );
 
-        StatCard studentsCard =
-                new StatCard(
-                        "Sinh viên",
-                        "Tổng số sinh viên",
-                        FontAwesomeSolid.USER_GRADUATE,
-                        UIConstants.PURPLE,
-                        UIConstants.PURPLE_LIGHT
-                );
+        StatCard studentsCard = new StatCard(
+                "Sinh viên",
+                "Tổng số sinh viên",
+                FontAwesomeSolid.USER_GRADUATE,
+                UIConstants.PURPLE,
+                UIConstants.PURPLE_LIGHT
+        );
 
-        StatCard teachersCard =
-                new StatCard(
-                        "Giảng viên",
-                        "Tổng số giảng viên",
-                        FontAwesomeSolid.CHALKBOARD_TEACHER,
-                        UIConstants.WARNING,
-                        UIConstants.WARNING_LIGHT
-                );
+        StatCard teachersCard = new StatCard(
+                "Giảng viên",
+                "Tổng số giảng viên",
+                FontAwesomeSolid.CHALKBOARD_TEACHER,
+                UIConstants.WARNING,
+                UIConstants.WARNING_LIGHT
+        );
 
-        StatCard coursesCard =
-                new StatCard(
-                        "Khóa học",
-                        "Tổng số khóa học",
-                        FontAwesomeSolid.BOOK_OPEN,
-                        UIConstants.PRIMARY,
-                        UIConstants.PRIMARY_LIGHT
-                );
+        StatCard coursesCard = new StatCard(
+                "Khóa học",
+                "Tổng số khóa học",
+                FontAwesomeSolid.BOOK_OPEN,
+                UIConstants.PRIMARY,
+                UIConstants.PRIMARY_LIGHT
+        );
 
-        StatCard classesCard =
-                new StatCard(
-                        "Lớp học",
-                        "Lớp đang quản lý",
-                        FontAwesomeSolid.SCHOOL,
-                        UIConstants.DANGER,
-                        UIConstants.DANGER_LIGHT
-                );
+        StatCard classesCard = new StatCard(
+                "Lớp học",
+                "Lớp đang quản lý",
+                FontAwesomeSolid.SCHOOL,
+                UIConstants.DANGER,
+                UIConstants.DANGER_LIGHT
+        );
 
         cards = List.of(
                 usersCard,
@@ -119,48 +108,34 @@ public class StatisticsView
                 classesCard
         );
 
-        revenueChartPanel =
-                new RevenueChartPanel();
+        revenueChartPanel = new RevenueChartPanel();
 
-        activityPanel =
-                new ActivityPanel(
-                        notificationService
-                );
+        activityPanel = new ActivityPanel(
+                notificationService
+        );
 
-        quickActionPanel =
-                new QuickActionPanel();
+        quickActionPanel = new QuickActionPanel();
 
         initializeView();
+        registerResponsiveListener();
 
-        addComponentListener(
-                new ComponentAdapter() {
-
-                    @Override
-                    public void componentResized(
-                            ComponentEvent event
-                    ) {
-                        rebuildResponsiveLayout();
-                    }
-                }
-        );
-
-        SwingUtilities.invokeLater(
-                this::rebuildResponsiveLayout
-        );
-
-        loadStatistics();
+        /*
+         * Dựng layout ngay sau khi component đã có kích thước.
+         */
+        SwingUtilities.invokeLater(() -> {
+            rebuildResponsiveLayout();
+            loadStatistics();
+        });
     }
 
     private void initializeView() {
-        setBackground(
-                UIConstants.BACKGROUND
-        );
+        setBackground(UIConstants.BACKGROUND);
 
         setLayout(
                 new MigLayout(
-                        "fillx, wrap 1, insets 12",
+                        "fillx, wrap 1, insets 16",
                         "[grow, fill]",
-                        "[]10[]10[]"
+                        "[]14[]14[]"
                 )
         );
 
@@ -171,7 +146,7 @@ public class StatisticsView
 
         add(
                 revenueChartPanel,
-                "growx, height 290:315:340"
+                "growx, height 300:320:350"
         );
 
         add(
@@ -180,18 +155,36 @@ public class StatisticsView
         );
     }
 
+    private void registerResponsiveListener() {
+        addComponentListener(
+                new ComponentAdapter() {
+                    @Override
+                    public void componentResized(
+                            ComponentEvent event
+                    ) {
+                        rebuildResponsiveLayout();
+                    }
+
+                    @Override
+                    public void componentShown(
+                            ComponentEvent event
+                    ) {
+                        rebuildResponsiveLayout();
+                    }
+                }
+        );
+    }
+
     public void setQuickActionHandler(
             Consumer<String> handler
     ) {
-        quickActionPanel
-                .setActionHandler(
-                        handler
-                );
+        quickActionPanel.setActionHandler(
+                handler
+        );
     }
 
     public void refreshActivities() {
-        activityPanel
-                .refreshActivities();
+        activityPanel.refreshActivities();
     }
 
     private void rebuildResponsiveLayout() {
@@ -201,57 +194,53 @@ public class StatisticsView
             return;
         }
 
-        int cardColumns;
+        int cardColumns = calculateCardColumns(width);
+        int bottomColumns = width >= 820 ? 2 : 1;
 
-        if (width >= 1350) {
-            cardColumns = 6;
-
-        } else if (width >= 720) {
-            cardColumns = 3;
-
-        } else if (width >= 470) {
-            cardColumns = 2;
-
-        } else {
-            cardColumns = 1;
-        }
-
-        int bottomColumns =
-                width >= 850
-                        ? 2
-                        : 1;
-
-        if (
-                cardColumns
-                        != currentCardColumns
-        ) {
+        if (cardColumns != currentCardColumns) {
             rebuildCards(cardColumns);
-
-            currentCardColumns =
-                    cardColumns;
+            currentCardColumns = cardColumns;
         }
 
-        if (
-                bottomColumns
-                        != currentBottomColumns
-        ) {
-            rebuildBottomPanel(
-                    bottomColumns
-            );
-
-            currentBottomColumns =
-                    bottomColumns;
+        if (bottomColumns != currentBottomColumns) {
+            rebuildBottomPanel(bottomColumns);
+            currentBottomColumns = bottomColumns;
         }
 
-        int visibleHeight =
-                getVisibleRect().height;
+        updateActivityLimit();
+    }
 
-        if (visibleHeight >= 720) {
-            activityPanel
-                    .setVisibleLimit(4);
+    private int calculateCardColumns(
+            int width
+    ) {
+        /*
+         * Sau khi trừ sidebar, chiều rộng thực tế thường nhỏ hơn
+         * kích thước JFrame. Vì vậy mốc 1120 phù hợp hơn 1350.
+         */
+        if (width >= 1120) {
+            return 6;
+        }
+
+        if (width >= 760) {
+            return 3;
+        }
+
+        if (width >= 500) {
+            return 2;
+        }
+
+        return 1;
+    }
+
+    private void updateActivityLimit() {
+        int visibleHeight = getVisibleRect().height;
+
+        if (visibleHeight >= 760) {
+            activityPanel.setVisibleLimit(5);
+        } else if (visibleHeight >= 620) {
+            activityPanel.setVisibleLimit(4);
         } else {
-            activityPanel
-                    .setVisibleLimit(3);
+            activityPanel.setVisibleLimit(3);
         }
     }
 
@@ -260,18 +249,16 @@ public class StatisticsView
     ) {
         cardsPanel.removeAll();
 
-        int rows =
-                (int) Math.ceil(
-                        cards.size()
-                                / (double) columns
-                );
+        int rows = (int) Math.ceil(
+                cards.size() / (double) columns
+        );
 
         cardsPanel.setLayout(
                 new GridLayout(
                         rows,
                         columns,
-                        10,
-                        10
+                        12,
+                        12
                 )
         );
 
@@ -289,22 +276,26 @@ public class StatisticsView
         bottomPanel.removeAll();
 
         if (columns == 2) {
+            /*
+             * Hoạt động gần đây rộng hơn phần thao tác nhanh,
+             * gần với bố cục Dashboard mẫu.
+             */
             bottomPanel.setLayout(
                     new MigLayout(
                             "fillx, insets 0",
-                            "[grow, fill][grow, fill]",
-                            "[220!]"
+                            "[grow 60, fill]12[grow 40, fill]",
+                            "[230!]"
                     )
             );
 
             bottomPanel.add(
                     activityPanel,
-                    "grow, height 220!"
+                    "grow, height 230!"
             );
 
             bottomPanel.add(
                     quickActionPanel,
-                    "grow, height 220!"
+                    "grow, height 230!"
             );
 
         } else {
@@ -312,18 +303,18 @@ public class StatisticsView
                     new MigLayout(
                             "fillx, wrap 1, insets 0",
                             "[grow, fill]",
-                            "[220!]10[220!]"
+                            "[230!]12[230!]"
                     )
             );
 
             bottomPanel.add(
                     activityPanel,
-                    "growx, height 220!"
+                    "growx, height 230!"
             );
 
             bottomPanel.add(
                     quickActionPanel,
-                    "growx, height 220!"
+                    "growx, height 230!"
             );
         }
 
@@ -332,9 +323,20 @@ public class StatisticsView
     }
 
     public void loadStatistics() {
+        if (loading) {
+            return;
+        }
+
+        loading = true;
+
         try {
-            Statistics statistics =
-                    controller.getOverview();
+            Statistics statistics = controller.getOverview();
+
+            if (statistics == null) {
+                throw new SQLException(
+                        "Không nhận được dữ liệu thống kê."
+                );
+            }
 
             cards.get(0).setValue(
                     statistics.getTotalUsers()
@@ -371,6 +373,18 @@ public class StatisticsView
                     "Lỗi database",
                     JOptionPane.ERROR_MESSAGE
             );
+
+        } catch (RuntimeException exception) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Đã xảy ra lỗi khi tải trang tổng quan.\n"
+                            + exception.getMessage(),
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE
+            );
+
+        } finally {
+            loading = false;
         }
     }
 }
