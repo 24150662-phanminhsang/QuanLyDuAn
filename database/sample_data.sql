@@ -1,4 +1,4 @@
-USE CourseManagement;
+﻿USE CourseManagement;
 GO
 
 /* =========================================================
