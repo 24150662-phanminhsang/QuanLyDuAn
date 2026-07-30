@@ -6,6 +6,7 @@ import model.User;
 import net.miginfocom.swing.MigLayout;
 import util.UIConstants;
 
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
@@ -13,17 +14,25 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
-import javax.swing.JScrollPane;
 import javax.swing.JTextField;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Toolkit;
 import java.awt.Window;
 
 public class UserFormDialog extends JDialog {
+
+    private static final int DIALOG_WIDTH = 650;
+    private static final int CREATE_DIALOG_HEIGHT = 515;
+    private static final int EDIT_DIALOG_HEIGHT = 475;
+
+    private static final int FIELD_HEIGHT = 40;
 
     private final boolean createMode;
 
@@ -52,13 +61,8 @@ public class UserFormDialog extends JDialog {
         emailField = new JTextField();
         phoneField = new JTextField();
 
-        roleComboBox =
-                new JComboBox<>(Role.values());
-
-        statusComboBox =
-                new JComboBox<>(
-                        AccountStatus.values()
-                );
+        roleComboBox = new JComboBox<>(Role.values());
+        statusComboBox = new JComboBox<>(AccountStatus.values());
 
         initializeDialog();
 
@@ -75,18 +79,17 @@ public class UserFormDialog extends JDialog {
         );
 
         setModal(true);
+        setResizable(false);
 
         setDefaultCloseOperation(
                 WindowConstants.DISPOSE_ON_CLOSE
         );
 
-        setResizable(false);
-
         JPanel rootPanel = new JPanel(
                 new MigLayout(
-                        "fill, wrap 1, insets 18",
+                        "fill, wrap 1, insets 0",
                         "[grow, fill]",
-                        "[]10[grow, fill]12[]"
+                        "[]0[grow, fill]0[]"
                 )
         );
 
@@ -97,57 +100,91 @@ public class UserFormDialog extends JDialog {
                 "growx"
         );
 
-        JScrollPane scrollPane =
-                new JScrollPane(
-                        createFormPanel()
-                );
-
-        scrollPane.setBorder(null);
-
-        scrollPane.setHorizontalScrollBarPolicy(
-                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER
-        );
-
-        scrollPane.setVerticalScrollBarPolicy(
-                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED
-        );
-
-        scrollPane.getVerticalScrollBar()
-                .setUnitIncrement(14);
-
         rootPanel.add(
-                scrollPane,
+                createContentPanel(),
                 "grow, push"
         );
 
         rootPanel.add(
-                createButtonPanel(),
+                createFooterPanel(),
                 "growx"
         );
 
         setContentPane(rootPanel);
 
-        setPreferredSize(
-                new Dimension(
+        applyResponsiveDialogSize();
+
+        setLocationRelativeTo(getOwner());
+    }
+
+    private void applyResponsiveDialogSize() {
+        Dimension screenSize =
+                Toolkit.getDefaultToolkit()
+                        .getScreenSize();
+
+        int expectedHeight =
+                createMode
+                        ? CREATE_DIALOG_HEIGHT
+                        : EDIT_DIALOG_HEIGHT;
+
+        int maximumWidth =
+                Math.max(
                         480,
-                        createMode ? 460 : 430
+                        screenSize.width - 100
+                );
+
+        int maximumHeight =
+                Math.max(
+                        420,
+                        screenSize.height - 100
+                );
+
+        int width =
+                Math.min(
+                        DIALOG_WIDTH,
+                        maximumWidth
+                );
+
+        int height =
+                Math.min(
+                        expectedHeight,
+                        maximumHeight
+                );
+
+        setPreferredSize(
+                new Dimension(width, height)
+        );
+
+        setMinimumSize(
+                new Dimension(
+                        Math.min(540, width),
+                        Math.min(420, height)
                 )
         );
 
         pack();
-        setLocationRelativeTo(getOwner());
     }
 
     private JPanel createHeaderPanel() {
         JPanel panel = new JPanel(
                 new MigLayout(
-                        "fillx, wrap 1, insets 0",
-                        "[grow]",
-                        "[][]"
+                        "fillx, wrap 1, insets 22 28 18 28",
+                        "[grow, fill]",
+                        "[]5[]"
                 )
         );
 
-        panel.setOpaque(false);
+        panel.setBackground(Color.WHITE);
+
+        panel.setBorder(
+                BorderFactory.createMatteBorder(
+                        0,
+                        0,
+                        1,
+                        0,
+                        UIConstants.BORDER
+                )
+        );
 
         JLabel titleLabel = new JLabel(
                 createMode
@@ -165,8 +202,8 @@ public class UserFormDialog extends JDialog {
 
         JLabel descriptionLabel = new JLabel(
                 createMode
-                        ? "Nhập đầy đủ thông tin tài khoản."
-                        : "Cập nhật thông tin tài khoản."
+                        ? "Nhập đầy đủ thông tin để tạo tài khoản mới."
+                        : "Cập nhật thông tin và quyền của tài khoản."
         );
 
         descriptionLabel.setFont(
@@ -183,16 +220,20 @@ public class UserFormDialog extends JDialog {
         return panel;
     }
 
-    private JPanel createFormPanel() {
-        JPanel panel = new JPanel(
+    private JPanel createContentPanel() {
+        JPanel contentPanel = new JPanel(
                 new MigLayout(
-                        "fillx, wrap 2, insets 6 2",
-                        "110![grow, fill]",
-                        "[]8[]8[]8[]8[]8[]"
+                        "fillx, wrap 2, insets 22 34 18 34",
+                        "[right, 145!]"
+                                + "18"
+                                + "[grow, fill]",
+                        createMode
+                                ? "[]12[]12[]12[]12[]12[]"
+                                : "[]12[]12[]12[]12[]12[]"
                 )
         );
 
-        panel.setBackground(Color.WHITE);
+        contentPanel.setBackground(Color.WHITE);
 
         configureTextField(usernameField);
         configureTextField(passwordField);
@@ -200,40 +241,77 @@ public class UserFormDialog extends JDialog {
         configureTextField(emailField);
         configureTextField(phoneField);
 
-        roleComboBox.setFont(
-                UIConstants.FONT_NORMAL
+        configureComboBox(roleComboBox);
+        configureComboBox(statusComboBox);
+
+        contentPanel.add(
+                createFieldLabel("Tên đăng nhập")
         );
 
-        statusComboBox.setFont(
-                UIConstants.FONT_NORMAL
+        contentPanel.add(
+                usernameField,
+                "growx, height " + FIELD_HEIGHT + "!"
         );
-
-        panel.add(createLabel("Tên đăng nhập"));
-        panel.add(usernameField, "height 36!");
 
         if (createMode) {
-            panel.add(createLabel("Mật khẩu"));
-            panel.add(passwordField, "height 36!");
+            contentPanel.add(
+                    createFieldLabel("Mật khẩu")
+            );
+
+            contentPanel.add(
+                    passwordField,
+                    "growx, height " + FIELD_HEIGHT + "!"
+            );
         }
 
-        panel.add(createLabel("Họ và tên"));
-        panel.add(fullNameField, "height 36!");
+        contentPanel.add(
+                createFieldLabel("Họ và tên")
+        );
 
-        panel.add(createLabel("Email"));
-        panel.add(emailField, "height 36!");
+        contentPanel.add(
+                fullNameField,
+                "growx, height " + FIELD_HEIGHT + "!"
+        );
 
-        panel.add(createLabel("Số điện thoại"));
-        panel.add(phoneField, "height 36!");
+        contentPanel.add(
+                createFieldLabel("Email")
+        );
 
-        panel.add(createLabel("Vai trò"));
-        panel.add(roleComboBox, "height 36!");
+        contentPanel.add(
+                emailField,
+                "growx, height " + FIELD_HEIGHT + "!"
+        );
+
+        contentPanel.add(
+                createFieldLabel("Số điện thoại")
+        );
+
+        contentPanel.add(
+                phoneField,
+                "growx, height " + FIELD_HEIGHT + "!"
+        );
+
+        contentPanel.add(
+                createFieldLabel("Vai trò")
+        );
+
+        contentPanel.add(
+                roleComboBox,
+                "growx, height " + FIELD_HEIGHT + "!"
+        );
 
         if (!createMode) {
-            panel.add(createLabel("Trạng thái"));
-            panel.add(statusComboBox, "height 36!");
+            contentPanel.add(
+                    createFieldLabel("Trạng thái")
+            );
+
+            contentPanel.add(
+                    statusComboBox,
+                    "growx, height " + FIELD_HEIGHT + "!"
+            );
         }
 
-        return panel;
+        return contentPanel;
     }
 
     private void configureTextField(
@@ -243,104 +321,212 @@ public class UserFormDialog extends JDialog {
                 UIConstants.FONT_NORMAL
         );
 
+        textField.setMinimumSize(
+                new Dimension(280, FIELD_HEIGHT)
+        );
+
+        textField.setPreferredSize(
+                new Dimension(360, FIELD_HEIGHT)
+        );
+
         textField.putClientProperty(
                 "FlatLaf.style",
                 """
-                arc: 9;
-                margin: 6,9,6,9;
+                arc: 10;
+                margin: 7,11,7,11;
+                borderColor: #CBD5E1;
+                focusedBorderColor: #2563EB;
                 """
         );
     }
 
-    private JLabel createLabel(String text) {
-        JLabel label = new JLabel(text + ":");
+    private void configureComboBox(
+            JComboBox<?> comboBox
+    ) {
+        comboBox.setFont(
+                UIConstants.FONT_NORMAL
+        );
 
-        label.setFont(UIConstants.FONT_MEDIUM);
-        label.setForeground(UIConstants.TEXT_PRIMARY);
+        comboBox.setMinimumSize(
+                new Dimension(280, FIELD_HEIGHT)
+        );
+
+        comboBox.setPreferredSize(
+                new Dimension(360, FIELD_HEIGHT)
+        );
+
+        comboBox.putClientProperty(
+                "FlatLaf.style",
+                """
+                arc: 10;
+                borderColor: #CBD5E1;
+                focusedBorderColor: #2563EB;
+                """
+        );
+    }
+
+    private JLabel createFieldLabel(
+            String text
+    ) {
+        JLabel label =
+                new JLabel(text + ":");
+
+        label.setFont(
+                UIConstants.FONT_MEDIUM
+        );
+
+        label.setForeground(
+                UIConstants.TEXT_PRIMARY
+        );
+
+        label.setHorizontalAlignment(
+                SwingConstants.RIGHT
+        );
 
         return label;
     }
 
-    private JPanel createButtonPanel() {
+    private JPanel createFooterPanel() {
         JPanel panel = new JPanel(
                 new MigLayout(
-                        "fillx, insets 0",
-                        "[grow][]8[]",
+                        "fillx, insets 14 28 18 28",
+                        "[grow][]10[]",
                         "[center]"
                 )
         );
 
-        panel.setOpaque(false);
+        panel.setBackground(Color.WHITE);
+
+        panel.setBorder(
+                BorderFactory.createMatteBorder(
+                        1,
+                        0,
+                        0,
+                        0,
+                        UIConstants.BORDER
+                )
+        );
 
         JButton cancelButton =
-                new JButton("Hủy");
+                createCancelButton();
 
-        JButton saveButton = new JButton(
-                createMode
-                        ? "Tạo tài khoản"
-                        : "Lưu thay đổi"
+        JButton saveButton =
+                createSaveButton();
+
+        panel.add(
+                new JPanel(),
+                "growx"
         );
 
-        cancelButton.setPreferredSize(
-                new Dimension(95, 36)
-        );
-
-        saveButton.setPreferredSize(
-                new Dimension(125, 36)
-        );
-
-        cancelButton.setFont(
-                UIConstants.FONT_MEDIUM
-        );
-
-        saveButton.setFont(
-                UIConstants.FONT_MEDIUM
-        );
-
-        cancelButton.setFocusable(false);
-        saveButton.setFocusable(false);
-
-        cancelButton.setBackground(Color.WHITE);
-
-        saveButton.setBackground(
-                UIConstants.PRIMARY
-        );
-
-        saveButton.setForeground(Color.WHITE);
-
-        cancelButton.setCursor(
-                Cursor.getPredefinedCursor(
-                        Cursor.HAND_CURSOR
-                )
-        );
-
-        saveButton.setCursor(
-                Cursor.getPredefinedCursor(
-                        Cursor.HAND_CURSOR
-                )
-        );
-
-        cancelButton.addActionListener(
-                event -> dispose()
-        );
-
-        saveButton.addActionListener(
-                event -> confirmForm()
-        );
-
-        panel.add(new JPanel(), "growx");
         panel.add(cancelButton);
         panel.add(saveButton);
 
         return panel;
     }
 
-    private void fillExistingUser(User user) {
+    private JButton createCancelButton() {
+        JButton button =
+                new JButton("Hủy");
+
+        button.setFont(
+                UIConstants.FONT_MEDIUM
+        );
+
+        button.setPreferredSize(
+                new Dimension(120, 40)
+        );
+
+        button.setBackground(Color.WHITE);
+
+        button.setForeground(
+                UIConstants.TEXT_PRIMARY
+        );
+
+        button.setFocusable(false);
+
+        button.setCursor(
+                Cursor.getPredefinedCursor(
+                        Cursor.HAND_CURSOR
+                )
+        );
+
+        button.putClientProperty(
+                "FlatLaf.style",
+                """
+                arc: 10;
+                borderWidth: 1;
+                borderColor: #CBD5E1;
+                focusedBorderColor: #94A3B8;
+                """
+        );
+
+        button.addActionListener(
+                event -> dispose()
+        );
+
+        return button;
+    }
+
+    private JButton createSaveButton() {
+        JButton button = new JButton(
+                createMode
+                        ? "Tạo tài khoản"
+                        : "Lưu thay đổi"
+        );
+
+        button.setFont(
+                UIConstants.FONT_MEDIUM
+        );
+
+        button.setPreferredSize(
+                new Dimension(150, 40)
+        );
+
+        button.setBackground(
+                UIConstants.PRIMARY
+        );
+
+        button.setForeground(Color.WHITE);
+        button.setFocusable(false);
+
+        button.setCursor(
+                Cursor.getPredefinedCursor(
+                        Cursor.HAND_CURSOR
+                )
+        );
+
+        button.putClientProperty(
+                "FlatLaf.style",
+                """
+                arc: 10;
+                borderWidth: 0;
+                focusedBorderColor: #2563EB;
+                """
+        );
+
+        button.addActionListener(
+                event -> confirmForm()
+        );
+
+        return button;
+    }
+
+    private void fillExistingUser(
+            User user
+    ) {
         usernameField.setText(
                 safeText(user.getUsername())
         );
 
         usernameField.setEditable(false);
+
+        usernameField.setBackground(
+                new Color(248, 250, 252)
+        );
+
+        usernameField.setToolTipText(
+                "Không thể thay đổi tên đăng nhập"
+        );
 
         fullNameField.setText(
                 safeText(user.getFullName())
@@ -354,20 +540,46 @@ public class UserFormDialog extends JDialog {
                 safeText(user.getPhone())
         );
 
-        roleComboBox.setSelectedItem(
-                user.getRole()
-        );
+        if (user.getRole() != null) {
+            roleComboBox.setSelectedItem(
+                    user.getRole()
+            );
+        }
 
-        statusComboBox.setSelectedItem(
-                user.getStatus()
-        );
+        if (user.getStatus() != null) {
+            statusComboBox.setSelectedItem(
+                    user.getStatus()
+            );
+        }
     }
 
     private void confirmForm() {
-        if (usernameField.getText().isBlank()) {
+        String username =
+                usernameField
+                        .getText()
+                        .trim();
+
+        String fullName =
+                fullNameField
+                        .getText()
+                        .trim();
+
+        String email =
+                emailField
+                        .getText()
+                        .trim();
+
+        String phone =
+                phoneField
+                        .getText()
+                        .trim();
+
+        if (username.isBlank()) {
             showValidationMessage(
                     "Tên đăng nhập không được để trống."
             );
+
+            usernameField.requestFocusInWindow();
             return;
         }
 
@@ -380,33 +592,47 @@ public class UserFormDialog extends JDialog {
             showValidationMessage(
                     "Mật khẩu không được để trống."
             );
+
+            passwordField.requestFocusInWindow();
             return;
         }
 
-        if (fullNameField.getText().isBlank()) {
+        if (
+                createMode
+                        && passwordField
+                        .getPassword()
+                        .length < 6
+        ) {
+            showValidationMessage(
+                    "Mật khẩu phải có ít nhất 6 ký tự."
+            );
+
+            passwordField.requestFocusInWindow();
+            return;
+        }
+
+        if (fullName.isBlank()) {
             showValidationMessage(
                     "Họ và tên không được để trống."
             );
+
+            fullNameField.requestFocusInWindow();
             return;
         }
-
-        String email =
-                emailField.getText().trim();
 
         if (
                 !email.isBlank()
                         && !email.matches(
-                        "^[\\w.-]+@[\\w.-]+\\.[A-Za-z]{2,}$"
+                        "^[\\w.%+-]+@[\\w.-]+\\.[A-Za-z]{2,}$"
                 )
         ) {
             showValidationMessage(
                     "Email không đúng định dạng."
             );
+
+            emailField.requestFocusInWindow();
             return;
         }
-
-        String phone =
-                phoneField.getText().trim();
 
         if (
                 !phone.isBlank()
@@ -415,8 +641,32 @@ public class UserFormDialog extends JDialog {
                 )
         ) {
             showValidationMessage(
-                    "Số điện thoại phải có từ 9 đến 11 chữ số."
+                    "Số điện thoại phải gồm từ 9 đến 11 chữ số."
             );
+
+            phoneField.requestFocusInWindow();
+            return;
+        }
+
+        if (roleComboBox.getSelectedItem() == null) {
+            showValidationMessage(
+                    "Hãy chọn vai trò cho tài khoản."
+            );
+
+            roleComboBox.requestFocusInWindow();
+            return;
+        }
+
+        if (
+                !createMode
+                        && statusComboBox
+                        .getSelectedItem() == null
+        ) {
+            showValidationMessage(
+                    "Hãy chọn trạng thái tài khoản."
+            );
+
+            statusComboBox.requestFocusInWindow();
             return;
         }
 
@@ -510,15 +760,23 @@ public class UserFormDialog extends JDialog {
 
     public Role getSelectedRole() {
         return (Role)
-                roleComboBox.getSelectedItem();
+                roleComboBox
+                        .getSelectedItem();
     }
 
     public AccountStatus getSelectedStatus() {
+        if (createMode) {
+            return AccountStatus.ACTIVE;
+        }
+
         return (AccountStatus)
-                statusComboBox.getSelectedItem();
+                statusComboBox
+                        .getSelectedItem();
     }
 
-    private String normalize(String value) {
+    private String normalize(
+            String value
+    ) {
         if (
                 value == null
                         || value.isBlank()
@@ -529,7 +787,11 @@ public class UserFormDialog extends JDialog {
         return value.trim();
     }
 
-    private String safeText(String value) {
-        return value == null ? "" : value;
+    private String safeText(
+            String value
+    ) {
+        return value == null
+                ? ""
+                : value;
     }
 }

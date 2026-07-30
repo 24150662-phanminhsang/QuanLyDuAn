@@ -1,140 +1,367 @@
 package dao;
-import connection.DBConnection;
-import model.Course;
 
+import model.Course;
+import util.DBConnection;
+
+import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * CourseDAO
- *
- * TODO: Implement later.
- */
-public interface CourseDAO {
+public class CourseDAO {
 
-    // Thêm khóa học
-    public boolean addCourse(Course course) {
+    /**
+     * Lấy các khóa học đang hoạt động để hiển thị
+     * trên Landing Page.
+     */
+    public List<Course> findActiveCourses()
+            throws SQLException {
 
-        String sql = "INSERT INTO Course(CourseName, Fee, Duration) VALUES(?,?,?)";
+        List<Course> courses = new ArrayList<>();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        String sql = """
+                SELECT
+                    course_id,
+                    course_code,
+                    course_name,
+                    description,
+                    credits,
+                    tuition_fee,
+                    status,
+                    created_at
+                FROM dbo.Courses
+                WHERE status = 'ACTIVE'
+                ORDER BY created_at DESC, course_id DESC
+                """;
 
-            ps.setString(1, course.getCourseName());
-            ps.setDouble(2, course.getFee());
-            ps.setInt(3, course.getDuration());
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
 
-            return ps.executeUpdate() > 0;
+                PreparedStatement statement =
+                        connection.prepareStatement(sql);
 
-        } catch (Exception e) {
-            e.printStackTrace();
+                ResultSet resultSet =
+                        statement.executeQuery()
+        ) {
+            while (resultSet.next()) {
+                courses.add(mapCourse(resultSet));
+            }
         }
 
-        return false;
+        return courses;
     }
 
-    // Lấy tất cả khóa học
-    public List<Course> getAllCourses() {
+    /**
+     * Lấy tối đa số lượng khóa học được yêu cầu.
+     * Dùng cho mục Khóa học nổi bật.
+     */
+    public List<Course> findFeaturedCourses(int limit)
+            throws SQLException {
 
-        List<Course> list = new ArrayList<>();
-
-        String sql = "SELECT * FROM Course";
-
-        try (Connection conn = DBConnection.getConnection();
-             Statement st = conn.createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
-
-            while (rs.next()) {
-
-                Course c = new Course();
-
-                c.setCourseID(rs.getInt("CourseID"));
-                c.setCourseName(rs.getString("CourseName"));
-                c.setFee(rs.getDouble("Fee"));
-                c.setDuration(rs.getInt("Duration"));
-
-                list.add(c);
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
+        if (limit <= 0) {
+            return new ArrayList<>();
         }
 
-        return list;
+        List<Course> courses = new ArrayList<>();
+
+        String sql = """
+                SELECT
+                    course_id,
+                    course_code,
+                    course_name,
+                    description,
+                    credits,
+                    tuition_fee,
+                    status,
+                    created_at
+                FROM dbo.Courses
+                WHERE status = 'ACTIVE'
+                ORDER BY created_at DESC, course_id DESC
+                OFFSET 0 ROWS
+                FETCH NEXT ? ROWS ONLY
+                """;
+
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
+
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            statement.setInt(1, limit);
+
+            try (
+                    ResultSet resultSet =
+                            statement.executeQuery()
+            ) {
+                while (resultSet.next()) {
+                    courses.add(mapCourse(resultSet));
+                }
+            }
+        }
+
+        return courses;
     }
 
-    // Tìm khóa học theo ID
-    public Course getCourseByID(int id) {
+    public Course findById(int courseId)
+            throws SQLException {
 
-        String sql = "SELECT * FROM Course WHERE CourseID=?";
+        String sql = """
+                SELECT
+                    course_id,
+                    course_code,
+                    course_name,
+                    description,
+                    credits,
+                    tuition_fee,
+                    status,
+                    created_at
+                FROM dbo.Courses
+                WHERE course_id = ?
+                """;
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
 
-            ps.setInt(1, id);
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            statement.setInt(1, courseId);
 
-            ResultSet rs = ps.executeQuery();
-
-            if (rs.next()) {
-
-                Course c = new Course();
-
-                c.setCourseID(rs.getInt("CourseID"));
-                c.setCourseName(rs.getString("CourseName"));
-                c.setFee(rs.getDouble("Fee"));
-                c.setDuration(rs.getInt("Duration"));
-
-                return c;
+            try (
+                    ResultSet resultSet =
+                            statement.executeQuery()
+            ) {
+                if (resultSet.next()) {
+                    return mapCourse(resultSet);
+                }
             }
-
-        } catch (Exception e) {
-            e.printStackTrace();
         }
 
         return null;
     }
 
-    // Cập nhật khóa học
-    public boolean updateCourse(Course course) {
+    public List<Course> findAll()
+            throws SQLException {
 
-        String sql = "UPDATE Course SET CourseName=?, Fee=?, Duration=? WHERE CourseID=?";
+        List<Course> courses = new ArrayList<>();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        String sql = """
+                SELECT
+                    course_id,
+                    course_code,
+                    course_name,
+                    description,
+                    credits,
+                    tuition_fee,
+                    status,
+                    created_at
+                FROM dbo.Courses
+                ORDER BY course_id DESC
+                """;
 
-            ps.setString(1, course.getCourseName());
-            ps.setDouble(2, course.getFee());
-            ps.setInt(3, course.getDuration());
-            ps.setInt(4, course.getCourseID());
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
 
-            return ps.executeUpdate() > 0;
+                PreparedStatement statement =
+                        connection.prepareStatement(sql);
 
-        } catch (Exception e) {
-            e.printStackTrace();
+                ResultSet resultSet =
+                        statement.executeQuery()
+        ) {
+            while (resultSet.next()) {
+                courses.add(mapCourse(resultSet));
+            }
         }
 
-        return false;
+        return courses;
     }
 
-    // Xóa khóa học
-    public boolean deleteCourse(int id) {
+    public boolean insert(Course course)
+            throws SQLException {
 
-        String sql = "DELETE FROM Course WHERE CourseID=?";
+        String sql = """
+                INSERT INTO dbo.Courses
+                (
+                    course_code,
+                    course_name,
+                    description,
+                    credits,
+                    tuition_fee,
+                    status,
+                    created_at
+                )
+                VALUES
+                (
+                    ?, ?, ?, ?, ?, ?, SYSDATETIME()
+                )
+                """;
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
 
-            ps.setInt(1, id);
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            setCourseParameters(
+                    statement,
+                    course
+            );
 
-            return ps.executeUpdate() > 0;
+            return statement.executeUpdate() > 0;
+        }
+    }
 
-        } catch (Exception e) {
-            e.printStackTrace();
+    public boolean update(Course course)
+            throws SQLException {
+
+        String sql = """
+                UPDATE dbo.Courses
+                SET
+                    course_code = ?,
+                    course_name = ?,
+                    description = ?,
+                    credits = ?,
+                    tuition_fee = ?,
+                    status = ?
+                WHERE course_id = ?
+                """;
+
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
+
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            setCourseParameters(
+                    statement,
+                    course
+            );
+
+            statement.setInt(
+                    7,
+                    course.getCourseId()
+            );
+
+            return statement.executeUpdate() > 0;
+        }
+    }
+
+    public boolean deleteById(int courseId)
+            throws SQLException {
+
+        String sql = """
+                DELETE FROM dbo.Courses
+                WHERE course_id = ?
+                """;
+
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
+
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            statement.setInt(1, courseId);
+
+            return statement.executeUpdate() > 0;
+        }
+    }
+
+    private void setCourseParameters(
+            PreparedStatement statement,
+            Course course
+    ) throws SQLException {
+
+        statement.setString(
+                1,
+                course.getCourseCode()
+        );
+
+        statement.setString(
+                2,
+                course.getCourseName()
+        );
+
+        statement.setString(
+                3,
+                course.getDescription()
+        );
+
+        statement.setInt(
+                4,
+                course.getCredits()
+        );
+
+        BigDecimal tuitionFee =
+                course.getTuitionFee();
+
+        if (tuitionFee == null) {
+            statement.setNull(
+                    5,
+                    Types.DECIMAL
+            );
+        } else {
+            statement.setBigDecimal(
+                    5,
+                    tuitionFee
+            );
         }
 
-        return false;
+        statement.setString(
+                6,
+                course.getStatus()
+        );
     }
 
+    private Course mapCourse(
+            ResultSet resultSet
+    ) throws SQLException {
 
+        Course course = new Course();
+
+        course.setCourseId(
+                resultSet.getInt("course_id")
+        );
+
+        course.setCourseCode(
+                resultSet.getString("course_code")
+        );
+
+        course.setCourseName(
+                resultSet.getString("course_name")
+        );
+
+        course.setDescription(
+                resultSet.getString("description")
+        );
+
+        course.setCredits(
+                resultSet.getInt("credits")
+        );
+
+        course.setTuitionFee(
+                resultSet.getBigDecimal("tuition_fee")
+        );
+
+        course.setStatus(
+                resultSet.getString("status")
+        );
+
+        Timestamp createdAt =
+                resultSet.getTimestamp("created_at");
+
+        if (createdAt != null) {
+            course.setCreatedAt(
+                    createdAt.toLocalDateTime()
+            );
+        }
+
+        return course;
+    }
 }

@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    COURSE MANAGEMENT SYSTEM
    Database: CourseManagement
    SQL Server
@@ -419,3 +419,11 @@ GO
 
 PRINT N'Đã tạo database CourseManagement thành công.';
 GO
+
+
+
+
+
+
+
+

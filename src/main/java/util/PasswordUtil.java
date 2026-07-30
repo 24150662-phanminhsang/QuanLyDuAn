@@ -6,29 +6,52 @@ import java.security.NoSuchAlgorithmException;
 
 public final class PasswordUtil {
 
+    private static final String HASH_ALGORITHM =
+            "SHA-256";
+
     private PasswordUtil() {
     }
 
-    public static String hashPassword(String password) {
-        if (password == null || password.isBlank()) {
+    /**
+     * Băm mật khẩu bằng SHA-256.
+     *
+     * Kết quả là chuỗi hexadecimal 64 ký tự,
+     * tương thích với HASHBYTES('SHA2_256', ...)
+     * trong dữ liệu mẫu SQL Server.
+     */
+    public static String hashPassword(
+            String rawPassword
+    ) {
+        if (rawPassword == null) {
             throw new IllegalArgumentException(
-                    "Mật khẩu không được để trống."
+                    "Mật khẩu không được null."
             );
         }
 
         try {
-            MessageDigest digest =
-                    MessageDigest.getInstance("SHA-256");
+            MessageDigest messageDigest =
+                    MessageDigest.getInstance(
+                            HASH_ALGORITHM
+                    );
 
-            byte[] hash = digest.digest(
-                    password.getBytes(StandardCharsets.UTF_8)
-            );
+            byte[] hashedBytes =
+                    messageDigest.digest(
+                            rawPassword.getBytes(
+                                    StandardCharsets.UTF_8
+                            )
+                    );
 
-            StringBuilder result = new StringBuilder();
+            StringBuilder result =
+                    new StringBuilder(
+                            hashedBytes.length * 2
+                    );
 
-            for (byte item : hash) {
+            for (byte hashedByte : hashedBytes) {
                 result.append(
-                        String.format("%02X", item)
+                        String.format(
+                                "%02X",
+                                hashedByte & 0xFF
+                        )
                 );
             }
 
@@ -36,7 +59,7 @@ public final class PasswordUtil {
 
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException(
-                    "Không thể mã hóa mật khẩu.",
+                    "Không thể sử dụng SHA-256.",
                     exception
             );
         }
@@ -44,13 +67,20 @@ public final class PasswordUtil {
 
     public static boolean matches(
             String rawPassword,
-            String storedHash
+            String storedPasswordHash
     ) {
-        if (storedHash == null) {
+        if (
+                rawPassword == null
+                        || storedPasswordHash == null
+        ) {
             return false;
         }
 
-        return hashPassword(rawPassword)
-                .equalsIgnoreCase(storedHash);
+        String inputHash =
+                hashPassword(rawPassword);
+
+        return inputHash.equalsIgnoreCase(
+                storedPasswordHash.trim()
+        );
     }
 }
