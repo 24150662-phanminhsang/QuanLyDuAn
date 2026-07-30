@@ -50,6 +50,16 @@ public class AdminDashboardView
     private final UserManagementView
             userManagementView;
 
+    private final StudentManagementView
+            studentManagementView;
+    private final TeacherManagementView
+            teacherManagementView;
+    private final CourseManagementView
+            courseManagementView;
+    private final ClassManagementView
+            classManagementView;
+    private final PaymentManagementView
+            paymentManagementView;
     private final List<SidebarButton>
             menuButtons;
 
@@ -79,6 +89,11 @@ public class AdminDashboardView
 
         userManagementView =
                 new UserManagementView();
+        studentManagementView = new StudentManagementView();
+        teacherManagementView = new TeacherManagementView();
+        courseManagementView = new CourseManagementView();
+        classManagementView = new ClassManagementView();
+        paymentManagementView = new PaymentManagementView();
 
         menuButtons =
                 new ArrayList<>();

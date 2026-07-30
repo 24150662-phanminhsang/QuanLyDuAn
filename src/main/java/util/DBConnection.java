@@ -69,4 +69,18 @@ public final class DBConnection {
             return false;
         }
     }
+    public static void main(String[] args) {
+        try (java.sql.Connection conn = getConnection()) {
+            if (conn != null) {
+                System.out.println("----------------------------------------");
+                System.out.println("===> KẾT NỐI SQL SERVER THÀNH CÔNG! <===");
+                System.out.println("----------------------------------------");
+            }
+        } catch (Exception e) {
+            System.out.println("----------------------------------------");
+            System.out.println("===> LỖI KẾT NỐI SQL SERVER: <===");
+            System.out.println("----------------------------------------");
+            e.printStackTrace();
+        }
+    }
 }

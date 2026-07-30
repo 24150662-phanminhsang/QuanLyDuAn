@@ -1,11 +1,12 @@
 package controller;
 
-/**
- * Điều phối xử lý cho module TeacherController.
- *
- * Luồng:
- * View -> Controller -> Service -> DAO -> SQL Server
- */
-public class TeacherController {
+import service.TeacherService;
+import model.Teacher;
 
+public class TeacherController {
+    private TeacherService teacherService = new TeacherService();
+
+    public void createTeacher(Teacher teacher) {
+        teacherService.addTeacher(teacher);
+    }
 }

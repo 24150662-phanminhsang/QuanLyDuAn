@@ -1,11 +1,13 @@
+
 package controller;
 
-/**
- * Điều phối xử lý cho module ClassController.
- *
- * Luồng:
- * View -> Controller -> Service -> DAO -> SQL Server
- */
-public class ClassController {
+import service.ClassService;
 
+public class ClassController {
+    private ClassService classService = new ClassService();
+
+    public void assignTeacher(int classId, int teacherId) {
+        classService.assignTeacherToClass(classId, teacherId);
+    }
 }
+

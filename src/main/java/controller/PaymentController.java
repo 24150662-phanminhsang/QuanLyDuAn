@@ -1,11 +1,12 @@
 package controller;
 
-/**
- * Điều phối xử lý cho module PaymentController.
- *
- * Luồng:
- * View -> Controller -> Service -> DAO -> SQL Server
- */
-public class PaymentController {
+import service.PaymentService;
 
+public class PaymentController {
+    private PaymentService paymentService = new PaymentService();
+
+    public void confirmPayment(int paymentId) {
+
+        paymentService.confirmPayment(paymentId);
+    }
 }
