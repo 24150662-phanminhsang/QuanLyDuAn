@@ -12,9 +12,8 @@ import java.util.Optional;
 
 public class CourseService {
 <<<<<<< HEAD
-
-}
 =======
+}
 
     private final CourseDAO courseDAO;
 

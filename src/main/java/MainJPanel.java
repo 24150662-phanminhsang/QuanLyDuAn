@@ -5,13 +5,9 @@ import view.TeacherManagementView;
 import javax.swing.*;
 import java.awt.*;
 
-public class MainFrame extends JFrame {
+public class MainJPanel extends JPanel {
 
-    public MainFrame() {
-        setTitle("HỆ THỐNG QUẢN LÝ DỰ ÁN / HỌC VIỆN");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1100, 680);
-        setLocationRelativeTo(null); // Hiển thị giữa màn hình
+    public MainJPanel() {
 
         // Sử dụng JTabbedPane làm menu chuyển màn hình
         JTabbedPane tabbedPane = new JTabbedPane();
@@ -34,8 +30,15 @@ public class MainFrame extends JFrame {
 
         // Chạy ứng dụng trên Event Dispatch Thread
         SwingUtilities.invokeLater(() -> {
-            MainFrame frame = new MainFrame();
-            frame.setVisible(true);
+            JFrame window = new JFrame("CourseManager");
+            window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            window.setSize(1400, 800);
+            window.setLocationRelativeTo(null);
+
+            // Bọc MainJPanel vào trong cửa sổ JFrame
+            window.add(new MainJPanel());
+
+            window.setVisible(true);
         });
     }
 }
