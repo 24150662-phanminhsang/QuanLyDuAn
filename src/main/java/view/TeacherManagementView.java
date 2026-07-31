@@ -104,15 +104,14 @@ public class TeacherManagementView extends JPanel {
         }
 
         Teacher teacher = new Teacher();
-        // 1. Các thuộc tính cho View
         teacher.setName(name);
         teacher.setEmail(email);
         teacher.setPhone(phone);
 
-        // 2. BỔ SUNG: Các thuộc tính bắt buộc cho Database (DAO)
-        teacher.setUserId(1); // Giả định ID user kết nối (hoặc ID user hợp lệ trong bảng USERS của bạn)
-        teacher.setTeacherCode("GV" + System.currentTimeMillis() % 10000); // Mã GV tự sinh (VD: GV1234)
-        teacher.setSpecialization("CNTT"); // Chuyên môn mặc định
+// Các thuộc tính bắt buộc phía Database (để DAO insert không bị lỗi)
+        teacher.setUserId(1);
+        teacher.setTeacherCode("GV" + System.currentTimeMillis() % 10000);
+        teacher.setSpecialization("CNTT");
 
         boolean success = teacherService.addTeacher(teacher);
         if (success) {

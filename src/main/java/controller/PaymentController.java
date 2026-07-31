@@ -1,12 +1,21 @@
 package controller;
 
+import model.Payment;
 import service.PaymentService;
+import java.util.List;
 
 public class PaymentController {
-    private PaymentService paymentService = new PaymentService();
+    private final PaymentService paymentService = new PaymentService();
 
-    public void confirmPayment(int paymentId) {
+    public List<Payment> getAllPayments() {
+        return paymentService.getAllPayments();
+    }
 
-        paymentService.confirmPayment(paymentId);
+    public boolean processPayment(Payment payment) {
+        return paymentService.processPayment(payment);
+    }
+
+    public boolean confirmPayment(int paymentId) {
+        return paymentService.updatePaymentStatus(paymentId, "COMPLETED");
     }
 }

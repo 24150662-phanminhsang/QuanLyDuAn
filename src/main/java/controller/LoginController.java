@@ -145,8 +145,7 @@ public class LoginController {
         loginView.dispose();
 
         SwingUtilities.invokeLater(() -> {
-            AdminDashboardView dashboard =
-                    new AdminDashboardView();
+            AdminDashboardView dashboard = new AdminDashboardView();
 
             dashboard.setLocationRelativeTo(null);
             dashboard.setVisible(true);
