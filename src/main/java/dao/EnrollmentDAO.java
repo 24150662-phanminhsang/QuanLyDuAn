@@ -1,64 +1,251 @@
 package dao;
 
 import model.Enrollment;
+import util.DBConnection;
 
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class EnrollmentDAO {
 
-    private final List<Enrollment> enrollmentList = new ArrayList<>();
+    private static final String BASE_SELECT =
+            """
+            SELECT
+                enrollment_id,
+                student_id,
+                class_id,
+                enrollment_date,
+                progress_percent,
+                status,
+                created_at
+            FROM Enrollments
+            """;
 
     public boolean addEnrollment(Enrollment enrollment) {
-        if (enrollment == null) {
-            return false;
-        }
 
-        return enrollmentList.add(enrollment);
+        String sql =
+                """
+                INSERT INTO Enrollments
+                (
+                    student_id,
+                    class_id,
+                    enrollment_date,
+                    progress_percent,
+                    status
+                )
+                VALUES
+                (
+                    ?, ?, ?, ?, ?
+                )
+                """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, enrollment.getStudentId());
+            ps.setInt(2, enrollment.getClassId());
+            ps.setDate(3, enrollment.getEnrollmentDate());
+            ps.setInt(4, enrollment.getProgressPercent());
+            ps.setString(5, enrollment.getStatus());
+
+            return ps.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public List<Enrollment> getAllEnrollments() {
-        return new ArrayList<>(enrollmentList);
+
+        List<Enrollment> list = new ArrayList<>();
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps =
+                     conn.prepareStatement(
+                             BASE_SELECT +
+                                     " ORDER BY enrollment_id DESC"
+                     );
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                list.add(map(rs));
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+        return list;
     }
 
     public Enrollment getEnrollmentById(int id) {
-        for (Enrollment enrollment : enrollmentList) {
-            if (enrollment.getEnrollmentId() == id) {
-                return enrollment;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps =
+                     conn.prepareStatement(
+                             BASE_SELECT +
+                                     " WHERE enrollment_id=?"
+                     )) {
+
+            ps.setInt(1, id);
+
+            try (ResultSet rs = ps.executeQuery()) {
+
+                if (rs.next()) {
+                    return map(rs);
+                }
             }
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
 
         return null;
     }
 
-    public boolean updateEnrollment(Enrollment enrollment) {
-        if (enrollment == null) {
-            return false;
-        }
+    public List<Enrollment> getByStudentId(int studentId) {
 
-        for (int i = 0; i < enrollmentList.size(); i++) {
-            Enrollment current = enrollmentList.get(i);
+        List<Enrollment> list = new ArrayList<>();
 
-            if (
-                    current.getEnrollmentId()
-                            == enrollment.getEnrollmentId()
-            ) {
-                enrollmentList.set(i, enrollment);
-                return true;
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps =
+                     conn.prepareStatement(
+                             BASE_SELECT +
+                                     " WHERE student_id=?"
+                     )) {
+
+            ps.setInt(1, studentId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+
+                while (rs.next()) {
+                    list.add(map(rs));
+                }
             }
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
 
-        return false;
+        return list;
+    }
+
+    public boolean updateEnrollment(Enrollment enrollment) {
+
+        String sql =
+                """
+                UPDATE Enrollments
+                SET
+                    student_id=?,
+                    class_id=?,
+                    enrollment_date=?,
+                    progress_percent=?,
+                    status=?
+                WHERE enrollment_id=?
+                """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, enrollment.getStudentId());
+            ps.setInt(2, enrollment.getClassId());
+            ps.setDate(3, enrollment.getEnrollmentDate());
+            ps.setInt(4, enrollment.getProgressPercent());
+            ps.setString(5, enrollment.getStatus());
+            ps.setInt(6, enrollment.getEnrollmentId());
+
+            return ps.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public boolean deleteEnrollment(int id) {
-        Enrollment enrollment =
-                getEnrollmentById(id);
 
-        if (enrollment == null) {
-            return false;
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps =
+                     conn.prepareStatement(
+                             "DELETE FROM Enrollments WHERE enrollment_id=?"
+                     )) {
+
+            ps.setInt(1, id);
+
+            return ps.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private Enrollment map(ResultSet rs)
+            throws SQLException {
+
+        Enrollment e = new Enrollment();
+
+        e.setEnrollmentId(
+                rs.getInt("enrollment_id")
+        );
+
+        e.setStudentId(
+                rs.getInt("student_id")
+        );
+
+        e.setClassId(
+                rs.getInt("class_id")
+        );
+
+        e.setEnrollmentDate(
+                rs.getDate("enrollment_date")
+        );
+
+        e.setProgressPercent(
+                rs.getInt("progress_percent")
+        );
+
+        e.setStatus(
+                rs.getString("status")
+        );
+
+        e.setCreatedAt(
+                rs.getTimestamp("created_at")
+        );
+
+        return e;
+    }
+    public int findEnrollmentId(
+            int studentId,
+            int classId
+    ) {
+        String sql =
+                """
+                SELECT enrollment_id
+                FROM Enrollments
+                WHERE student_id = ?
+                  AND class_id = ?
+                """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, studentId);
+            ps.setInt(2, classId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("enrollment_id");
+                }
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException(
+                    "Không thể tìm đăng ký học: "
+                            + e.getMessage(),
+                    e
+            );
         }
 
-        return enrollmentList.remove(enrollment);
+        return 0;
     }
 }

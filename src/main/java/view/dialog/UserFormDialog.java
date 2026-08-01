@@ -29,8 +29,8 @@ import java.awt.Window;
 public class UserFormDialog extends JDialog {
 
     private static final int DIALOG_WIDTH = 650;
-    private static final int CREATE_DIALOG_HEIGHT = 515;
-    private static final int EDIT_DIALOG_HEIGHT = 475;
+    private static final int CREATE_DIALOG_HEIGHT = 650;
+    private static final int EDIT_DIALOG_HEIGHT = 590;
 
     private static final int FIELD_HEIGHT = 40;
 
@@ -79,7 +79,7 @@ public class UserFormDialog extends JDialog {
         );
 
         setModal(true);
-        setResizable(false);
+        setResizable(true);
 
         setDefaultCloseOperation(
                 WindowConstants.DISPOSE_ON_CLOSE
@@ -151,18 +151,33 @@ public class UserFormDialog extends JDialog {
                         maximumHeight
                 );
 
-        setPreferredSize(
-                new Dimension(width, height)
-        );
-
         setMinimumSize(
                 new Dimension(
-                        Math.min(540, width),
-                        Math.min(420, height)
+                        Math.min(560, width),
+                        Math.min(520, height)
                 )
         );
 
         pack();
+
+        /*
+         * Bảo đảm phần footer chứa nút Hủy/Lưu thay đổi
+         * luôn hiển thị đầy đủ, kể cả khi font hoặc DPI lớn.
+         */
+        int packedWidth = Math.max(
+                getWidth(),
+                width
+        );
+
+        int packedHeight = Math.max(
+                getHeight(),
+                height
+        );
+
+        setSize(
+                Math.min(packedWidth, maximumWidth),
+                Math.min(packedHeight, maximumHeight)
+        );
     }
 
     private JPanel createHeaderPanel() {

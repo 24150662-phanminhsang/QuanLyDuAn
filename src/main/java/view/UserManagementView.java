@@ -1592,6 +1592,8 @@ public class UserManagementView extends JPanel {
 
             return switch (status) {
                 case ACTIVE -> "🟢 Hoạt động";
+                case PENDING_EMAIL -> "🟡 Chờ xác minh email";
+                case PENDING_APPROVAL -> "🟠 Chờ quản trị viên duyệt";
                 case LOCKED -> "🔒 Đã khóa";
                 case INACTIVE -> "⚪ Không hoạt động";
             };
@@ -1606,6 +1608,8 @@ public class UserManagementView extends JPanel {
 
             return switch (status) {
                 case ACTIVE -> UIConstants.SUCCESS;
+                case PENDING_EMAIL -> new Color(202, 138, 4);
+                case PENDING_APPROVAL -> new Color(234, 88, 12);
                 case LOCKED -> UIConstants.DANGER;
                 case INACTIVE -> UIConstants.WARNING;
             };

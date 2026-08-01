@@ -2,6 +2,7 @@ package service;
 
 import dao.UserDAO;
 import model.AccountStatus;
+import model.Role;
 import model.User;
 import util.PasswordUtil;
 
@@ -28,9 +29,6 @@ public class UserService {
 
     /**
      * Tìm người dùng theo ID.
-     *
-     * UserDAO trả về User hoặc null,
-     * nên Service chuyển thành Optional.
      */
     public Optional<User> getUserById(int id)
             throws SQLException {
@@ -111,7 +109,10 @@ public class UserService {
                 normalize(phone)
         );
 
+        Role role = convertRoleIdToRole(roleId);
+
         user.setRoleId(roleId);
+        user.setRole(role);
 
         user.setStatus(
                 AccountStatus.ACTIVE
@@ -368,5 +369,25 @@ public class UserService {
         }
 
         return value.trim();
+    }
+
+    /**
+     * Chuyển roleId thành Role.
+     *
+     * Phải đảm bảo ID trong bảng Roles đúng theo thứ tự này:
+     * 1 = ADMIN
+     * 2 = TEACHER
+     * 3 = STUDENT
+     */
+    private Role convertRoleIdToRole(int roleId) {
+        return switch (roleId) {
+            case 1 -> Role.ADMIN;
+            case 2 -> Role.TEACHER;
+            case 3 -> Role.STUDENT;
+
+            default -> throw new IllegalArgumentException(
+                    "Vai trò không hợp lệ: " + roleId
+            );
+        };
     }
 }

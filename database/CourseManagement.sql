@@ -7,6 +7,10 @@
 USE master;
 GO
 
+/* =========================================================
+   0. CREATE DATABASE
+   ========================================================= */
+
 IF DB_ID(N'CourseManagement') IS NULL
 BEGIN
     CREATE DATABASE CourseManagement;
@@ -25,9 +29,16 @@ BEGIN
     CREATE TABLE dbo.Roles
     (
         role_id INT IDENTITY(1,1) PRIMARY KEY,
-        role_name VARCHAR(30) NOT NULL UNIQUE,
+
+        role_name VARCHAR(30) NOT NULL,
         description NVARCHAR(255) NULL,
-        created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME()
+
+        created_at DATETIME2 NOT NULL
+            CONSTRAINT DF_Roles_CreatedAt
+            DEFAULT SYSDATETIME(),
+
+        CONSTRAINT UQ_Roles_RoleName
+            UNIQUE (role_name)
     );
 END;
 GO
@@ -52,9 +63,11 @@ BEGIN
         role_id INT NOT NULL,
 
         status VARCHAR(20) NOT NULL
+            CONSTRAINT DF_Users_Status
             DEFAULT 'ACTIVE',
 
         created_at DATETIME2 NOT NULL
+            CONSTRAINT DF_Users_CreatedAt
             DEFAULT SYSDATETIME(),
 
         updated_at DATETIME2 NULL,
@@ -66,7 +79,13 @@ BEGIN
             UNIQUE (email),
 
         CONSTRAINT CK_Users_Status
-            CHECK (status IN ('ACTIVE', 'LOCKED', 'INACTIVE')),
+            CHECK (
+                status IN (
+                    'ACTIVE',
+                    'LOCKED',
+                    'INACTIVE'
+                )
+            ),
 
         CONSTRAINT FK_Users_Roles
             FOREIGN KEY (role_id)
@@ -77,7 +96,6 @@ GO
 
 /* =========================================================
    3. STUDENTS
-   Thành viên 2 phụ trách code Java
    ========================================================= */
 
 IF OBJECT_ID(N'dbo.Students', N'U') IS NULL
@@ -86,8 +104,8 @@ BEGIN
     (
         student_id INT IDENTITY(1,1) PRIMARY KEY,
 
-        student_code VARCHAR(20) NOT NULL UNIQUE,
-        user_id INT NULL UNIQUE,
+        student_code VARCHAR(20) NOT NULL,
+        user_id INT NULL,
 
         full_name NVARCHAR(100) NOT NULL,
         date_of_birth DATE NULL,
@@ -97,17 +115,37 @@ BEGIN
         phone VARCHAR(20) NULL,
         address NVARCHAR(255) NULL,
 
-        status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
-        created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+        status VARCHAR(20) NOT NULL
+            CONSTRAINT DF_Students_Status
+            DEFAULT 'ACTIVE',
+
+        created_at DATETIME2 NOT NULL
+            CONSTRAINT DF_Students_CreatedAt
+            DEFAULT SYSDATETIME(),
+
+        CONSTRAINT UQ_Students_StudentCode
+            UNIQUE (student_code),
+
+        CONSTRAINT UQ_Students_UserId
+            UNIQUE (user_id),
 
         CONSTRAINT CK_Students_Gender
             CHECK (
                 gender IS NULL
-                OR gender IN ('MALE', 'FEMALE', 'OTHER')
+                OR gender IN (
+                    'MALE',
+                    'FEMALE',
+                    'OTHER'
+                )
             ),
 
         CONSTRAINT CK_Students_Status
-            CHECK (status IN ('ACTIVE', 'INACTIVE')),
+            CHECK (
+                status IN (
+                    'ACTIVE',
+                    'INACTIVE'
+                )
+            ),
 
         CONSTRAINT FK_Students_Users
             FOREIGN KEY (user_id)
@@ -118,7 +156,6 @@ GO
 
 /* =========================================================
    4. TEACHERS
-   Thành viên 3 phụ trách code Java
    ========================================================= */
 
 IF OBJECT_ID(N'dbo.Teachers', N'U') IS NULL
@@ -127,8 +164,8 @@ BEGIN
     (
         teacher_id INT IDENTITY(1,1) PRIMARY KEY,
 
-        teacher_code VARCHAR(20) NOT NULL UNIQUE,
-        user_id INT NULL UNIQUE,
+        teacher_code VARCHAR(20) NOT NULL,
+        user_id INT NULL,
 
         full_name NVARCHAR(100) NOT NULL,
         email VARCHAR(100) NULL,
@@ -136,11 +173,27 @@ BEGIN
 
         specialization NVARCHAR(100) NULL,
 
-        status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
-        created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+        status VARCHAR(20) NOT NULL
+            CONSTRAINT DF_Teachers_Status
+            DEFAULT 'ACTIVE',
+
+        created_at DATETIME2 NOT NULL
+            CONSTRAINT DF_Teachers_CreatedAt
+            DEFAULT SYSDATETIME(),
+
+        CONSTRAINT UQ_Teachers_TeacherCode
+            UNIQUE (teacher_code),
+
+        CONSTRAINT UQ_Teachers_UserId
+            UNIQUE (user_id),
 
         CONSTRAINT CK_Teachers_Status
-            CHECK (status IN ('ACTIVE', 'INACTIVE')),
+            CHECK (
+                status IN (
+                    'ACTIVE',
+                    'INACTIVE'
+                )
+            ),
 
         CONSTRAINT FK_Teachers_Users
             FOREIGN KEY (user_id)
@@ -159,16 +212,29 @@ BEGIN
     (
         course_id INT IDENTITY(1,1) PRIMARY KEY,
 
-        course_code VARCHAR(20) NOT NULL UNIQUE,
+        course_code VARCHAR(20) NOT NULL,
         course_name NVARCHAR(150) NOT NULL,
 
         description NVARCHAR(500) NULL,
 
-        credits INT NOT NULL DEFAULT 3,
-        tuition_fee DECIMAL(18,2) NOT NULL DEFAULT 0,
+        credits INT NOT NULL
+            CONSTRAINT DF_Courses_Credits
+            DEFAULT 3,
 
-        status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
-        created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+        tuition_fee DECIMAL(18,2) NOT NULL
+            CONSTRAINT DF_Courses_TuitionFee
+            DEFAULT 0,
+
+        status VARCHAR(20) NOT NULL
+            CONSTRAINT DF_Courses_Status
+            DEFAULT 'ACTIVE',
+
+        created_at DATETIME2 NOT NULL
+            CONSTRAINT DF_Courses_CreatedAt
+            DEFAULT SYSDATETIME(),
+
+        CONSTRAINT UQ_Courses_CourseCode
+            UNIQUE (course_code),
 
         CONSTRAINT CK_Courses_Credits
             CHECK (credits > 0),
@@ -177,14 +243,18 @@ BEGIN
             CHECK (tuition_fee >= 0),
 
         CONSTRAINT CK_Courses_Status
-            CHECK (status IN ('ACTIVE', 'INACTIVE'))
+            CHECK (
+                status IN (
+                    'ACTIVE',
+                    'INACTIVE'
+                )
+            )
     );
 END;
 GO
 
 /* =========================================================
    6. COURSE CLASSES
-   Dùng CourseClasses vì Class là tên dễ gây nhầm trong Java
    ========================================================= */
 
 IF OBJECT_ID(N'dbo.CourseClasses', N'U') IS NULL
@@ -193,7 +263,7 @@ BEGIN
     (
         class_id INT IDENTITY(1,1) PRIMARY KEY,
 
-        class_code VARCHAR(30) NOT NULL UNIQUE,
+        class_code VARCHAR(30) NOT NULL,
         course_id INT NOT NULL,
         teacher_id INT NULL,
 
@@ -203,20 +273,35 @@ BEGIN
         room VARCHAR(30) NULL,
         schedule_text NVARCHAR(100) NULL,
 
-        maximum_students INT NOT NULL DEFAULT 40,
+        maximum_students INT NOT NULL
+            CONSTRAINT DF_CourseClasses_MaximumStudents
+            DEFAULT 40,
 
         start_date DATE NULL,
         end_date DATE NULL,
 
-        status VARCHAR(20) NOT NULL DEFAULT 'OPEN',
-        created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+        status VARCHAR(20) NOT NULL
+            CONSTRAINT DF_CourseClasses_Status
+            DEFAULT 'OPEN',
+
+        created_at DATETIME2 NOT NULL
+            CONSTRAINT DF_CourseClasses_CreatedAt
+            DEFAULT SYSDATETIME(),
+
+        CONSTRAINT UQ_CourseClasses_ClassCode
+            UNIQUE (class_code),
 
         CONSTRAINT CK_CourseClasses_MaximumStudents
             CHECK (maximum_students > 0),
 
         CONSTRAINT CK_CourseClasses_Status
             CHECK (
-                status IN ('OPEN', 'CLOSED', 'COMPLETED', 'CANCELLED')
+                status IN (
+                    'OPEN',
+                    'CLOSED',
+                    'COMPLETED',
+                    'CANCELLED'
+                )
             ),
 
         CONSTRAINT CK_CourseClasses_Dates
@@ -250,17 +335,41 @@ BEGIN
         student_id INT NOT NULL,
         class_id INT NOT NULL,
 
-        enrollment_date DATE NOT NULL DEFAULT CAST(GETDATE() AS DATE),
+        enrollment_date DATE NOT NULL
+            CONSTRAINT DF_Enrollments_EnrollmentDate
+            DEFAULT CAST(GETDATE() AS DATE),
 
-        status VARCHAR(20) NOT NULL DEFAULT 'ENROLLED',
-        created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+        progress_percent INT NOT NULL
+            CONSTRAINT DF_Enrollments_Progress
+            DEFAULT 0,
 
-        CONSTRAINT UQ_Enrollments_Student_Class
-            UNIQUE (student_id, class_id),
+        status VARCHAR(20) NOT NULL
+            CONSTRAINT DF_Enrollments_Status
+            DEFAULT 'ENROLLED',
+
+        created_at DATETIME2 NOT NULL
+            CONSTRAINT DF_Enrollments_CreatedAt
+            DEFAULT SYSDATETIME(),
+
+        CONSTRAINT UQ_Enrollments_StudentClass
+            UNIQUE (
+                student_id,
+                class_id
+            ),
+
+        CONSTRAINT CK_Enrollments_Progress
+            CHECK (
+                progress_percent
+                BETWEEN 0 AND 100
+            ),
 
         CONSTRAINT CK_Enrollments_Status
             CHECK (
-                status IN ('ENROLLED', 'COMPLETED', 'CANCELLED')
+                status IN (
+                    'ENROLLED',
+                    'COMPLETED',
+                    'CANCELLED'
+                )
             ),
 
         CONSTRAINT FK_Enrollments_Students
@@ -275,6 +384,40 @@ END;
 GO
 
 /* =========================================================
+   BỔ SUNG PROGRESS NẾU BẢNG ENROLLMENTS ĐÃ TỒN TẠI
+   ========================================================= */
+
+IF COL_LENGTH(
+        'dbo.Enrollments',
+        'progress_percent'
+   ) IS NULL
+BEGIN
+    ALTER TABLE dbo.Enrollments
+    ADD progress_percent INT NOT NULL
+        CONSTRAINT DF_Enrollments_Progress
+        DEFAULT 0;
+END;
+GO
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.check_constraints
+    WHERE name = 'CK_Enrollments_Progress'
+      AND parent_object_id =
+          OBJECT_ID('dbo.Enrollments')
+)
+BEGIN
+    ALTER TABLE dbo.Enrollments
+    ADD CONSTRAINT CK_Enrollments_Progress
+        CHECK (
+            progress_percent
+            BETWEEN 0 AND 100
+        );
+END;
+GO
+
+/* =========================================================
    8. GRADES
    ========================================================= */
 
@@ -284,7 +427,7 @@ BEGIN
     (
         grade_id INT IDENTITY(1,1) PRIMARY KEY,
 
-        enrollment_id INT NOT NULL UNIQUE,
+        enrollment_id INT NOT NULL,
 
         attendance_score DECIMAL(4,2) NULL,
         midterm_score DECIMAL(4,2) NULL,
@@ -293,7 +436,12 @@ BEGIN
 
         result VARCHAR(20) NULL,
 
-        updated_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+        updated_at DATETIME2 NOT NULL
+            CONSTRAINT DF_Grades_UpdatedAt
+            DEFAULT SYSDATETIME(),
+
+        CONSTRAINT UQ_Grades_EnrollmentId
+            UNIQUE (enrollment_id),
 
         CONSTRAINT CK_Grades_Attendance
             CHECK (
@@ -322,7 +470,10 @@ BEGIN
         CONSTRAINT CK_Grades_Result
             CHECK (
                 result IS NULL
-                OR result IN ('PASSED', 'FAILED')
+                OR result IN (
+                    'PASSED',
+                    'FAILED'
+                )
             ),
 
         CONSTRAINT FK_Grades_Enrollments
@@ -346,21 +497,30 @@ BEGIN
         enrollment_id INT NULL,
 
         amount DECIMAL(18,2) NOT NULL,
-        payment_date DATETIME2 NULL,
 
+        payment_date DATETIME2 NULL,
         payment_method VARCHAR(30) NULL,
 
-        status VARCHAR(20) NOT NULL DEFAULT 'UNPAID',
+        status VARCHAR(20) NOT NULL
+            CONSTRAINT DF_Payments_Status
+            DEFAULT 'UNPAID',
+
         note NVARCHAR(255) NULL,
 
-        created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+        created_at DATETIME2 NOT NULL
+            CONSTRAINT DF_Payments_CreatedAt
+            DEFAULT SYSDATETIME(),
 
         CONSTRAINT CK_Payments_Amount
             CHECK (amount >= 0),
 
         CONSTRAINT CK_Payments_Status
             CHECK (
-                status IN ('UNPAID', 'PAID', 'CANCELLED')
+                status IN (
+                    'UNPAID',
+                    'PAID',
+                    'CANCELLED'
+                )
             ),
 
         CONSTRAINT FK_Payments_Students
@@ -375,7 +535,106 @@ END;
 GO
 
 /* =========================================================
-   10. INDEX
+   10. ASSIGNMENTS
+   ========================================================= */
+
+IF OBJECT_ID(N'dbo.Assignments', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Assignments
+    (
+        assignment_id INT IDENTITY(1,1) PRIMARY KEY,
+
+        class_id INT NOT NULL,
+
+        title NVARCHAR(200) NOT NULL,
+        description NVARCHAR(1000) NULL,
+
+        assigned_date DATE NOT NULL
+            CONSTRAINT DF_Assignments_AssignedDate
+            DEFAULT CAST(GETDATE() AS DATE),
+
+        due_date DATETIME2 NOT NULL,
+
+        maximum_score DECIMAL(4,2) NOT NULL
+            CONSTRAINT DF_Assignments_MaximumScore
+            DEFAULT 10,
+
+        status VARCHAR(20) NOT NULL
+            CONSTRAINT DF_Assignments_Status
+            DEFAULT 'OPEN',
+
+        created_at DATETIME2 NOT NULL
+            CONSTRAINT DF_Assignments_CreatedAt
+            DEFAULT SYSDATETIME(),
+
+        CONSTRAINT CK_Assignments_MaximumScore
+            CHECK (
+                maximum_score > 0
+                AND maximum_score <= 10
+            ),
+
+        CONSTRAINT CK_Assignments_Status
+            CHECK (
+                status IN (
+                    'OPEN',
+                    'CLOSED',
+                    'CANCELLED'
+                )
+            ),
+
+        CONSTRAINT FK_Assignments_CourseClasses
+            FOREIGN KEY (class_id)
+            REFERENCES dbo.CourseClasses(class_id)
+    );
+END;
+GO
+
+/* =========================================================
+   11. NOTIFICATIONS
+   ========================================================= */
+
+IF OBJECT_ID(N'dbo.Notifications', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Notifications
+    (
+        notification_id INT IDENTITY(1,1) PRIMARY KEY,
+
+        user_id INT NOT NULL,
+
+        title NVARCHAR(150) NOT NULL,
+        message NVARCHAR(500) NOT NULL,
+
+        notification_type VARCHAR(30) NOT NULL
+            CONSTRAINT DF_Notifications_Type
+            DEFAULT 'INFORMATION',
+
+        is_read BIT NOT NULL
+            CONSTRAINT DF_Notifications_IsRead
+            DEFAULT 0,
+
+        created_at DATETIME2 NOT NULL
+            CONSTRAINT DF_Notifications_CreatedAt
+            DEFAULT SYSDATETIME(),
+
+        CONSTRAINT CK_Notifications_Type
+            CHECK (
+                notification_type IN (
+                    'INFORMATION',
+                    'SUCCESS',
+                    'WARNING',
+                    'DANGER'
+                )
+            ),
+
+        CONSTRAINT FK_Notifications_Users
+            FOREIGN KEY (user_id)
+            REFERENCES dbo.Users(user_id)
+    );
+END;
+GO
+
+/* =========================================================
+   12. INDEXES
    ========================================================= */
 
 IF NOT EXISTS
@@ -383,7 +642,8 @@ IF NOT EXISTS
     SELECT 1
     FROM sys.indexes
     WHERE name = 'IX_Users_RoleId'
-      AND object_id = OBJECT_ID('dbo.Users')
+      AND object_id =
+          OBJECT_ID('dbo.Users')
 )
 BEGIN
     CREATE INDEX IX_Users_RoleId
@@ -395,8 +655,65 @@ IF NOT EXISTS
 (
     SELECT 1
     FROM sys.indexes
+    WHERE name = 'IX_Students_UserId'
+      AND object_id =
+          OBJECT_ID('dbo.Students')
+)
+BEGIN
+    CREATE INDEX IX_Students_UserId
+        ON dbo.Students(user_id);
+END;
+GO
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = 'IX_Teachers_UserId'
+      AND object_id =
+          OBJECT_ID('dbo.Teachers')
+)
+BEGIN
+    CREATE INDEX IX_Teachers_UserId
+        ON dbo.Teachers(user_id);
+END;
+GO
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = 'IX_CourseClasses_CourseId'
+      AND object_id =
+          OBJECT_ID('dbo.CourseClasses')
+)
+BEGIN
+    CREATE INDEX IX_CourseClasses_CourseId
+        ON dbo.CourseClasses(course_id);
+END;
+GO
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = 'IX_CourseClasses_TeacherId'
+      AND object_id =
+          OBJECT_ID('dbo.CourseClasses')
+)
+BEGIN
+    CREATE INDEX IX_CourseClasses_TeacherId
+        ON dbo.CourseClasses(teacher_id);
+END;
+GO
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
     WHERE name = 'IX_Enrollments_StudentId'
-      AND object_id = OBJECT_ID('dbo.Enrollments')
+      AND object_id =
+          OBJECT_ID('dbo.Enrollments')
 )
 BEGIN
     CREATE INDEX IX_Enrollments_StudentId
@@ -408,22 +725,99 @@ IF NOT EXISTS
 (
     SELECT 1
     FROM sys.indexes
-    WHERE name = 'IX_CourseClasses_CourseId'
-      AND object_id = OBJECT_ID('dbo.CourseClasses')
+    WHERE name = 'IX_Enrollments_ClassId'
+      AND object_id =
+          OBJECT_ID('dbo.Enrollments')
 )
 BEGIN
-    CREATE INDEX IX_CourseClasses_CourseId
-        ON dbo.CourseClasses(course_id);
+    CREATE INDEX IX_Enrollments_ClassId
+        ON dbo.Enrollments(class_id);
 END;
 GO
 
-PRINT N'Đã tạo database CourseManagement thành công.';
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = 'IX_Grades_EnrollmentId'
+      AND object_id =
+          OBJECT_ID('dbo.Grades')
+)
+BEGIN
+    CREATE INDEX IX_Grades_EnrollmentId
+        ON dbo.Grades(enrollment_id);
+END;
 GO
 
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = 'IX_Payments_StudentId'
+      AND object_id =
+          OBJECT_ID('dbo.Payments')
+)
+BEGIN
+    CREATE INDEX IX_Payments_StudentId
+        ON dbo.Payments(student_id);
+END;
+GO
 
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = 'IX_Assignments_ClassId'
+      AND object_id =
+          OBJECT_ID('dbo.Assignments')
+)
+BEGIN
+    CREATE INDEX IX_Assignments_ClassId
+        ON dbo.Assignments(class_id);
+END;
+GO
 
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = 'IX_Notifications_UserId'
+      AND object_id =
+          OBJECT_ID('dbo.Notifications')
+)
+BEGIN
+    CREATE INDEX IX_Notifications_UserId
+        ON dbo.Notifications(user_id);
+END;
+GO
 
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = 'IX_Notifications_UserRead'
+      AND object_id =
+          OBJECT_ID('dbo.Notifications')
+)
+BEGIN
+    CREATE INDEX IX_Notifications_UserRead
+        ON dbo.Notifications(
+            user_id,
+            is_read
+        );
+END;
+GO
 
+PRINT N'Đã tạo hoặc cập nhật database CourseManagement thành công.';
+GO
 
+/* =========================================================
+   13. KIỂM TRA CÁC BẢNG
+   ========================================================= */
 
-
+SELECT
+    TABLE_NAME
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_TYPE = 'BASE TABLE'
+ORDER BY TABLE_NAME;
+GO

@@ -15,55 +15,71 @@
     <properties>
         <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <mssql.jdbc.version>13.4.0.jre11</mssql.jdbc.version>
+        <flatlaf.version>3.7</flatlaf.version>
+        <miglayout.version>11.4.2</miglayout.version>
+        <ikonli.version>12.4.0</ikonli.version>
+        <jfreechart.version>1.5.6</jfreechart.version>
+        <jakarta.mail.version>2.0.4</jakarta.mail.version>
     </properties>
 
     <dependencies>
 
-        <!-- SQL Server -->
+        <!-- SQL Server JDBC -->
         <dependency>
             <groupId>com.microsoft.sqlserver</groupId>
             <artifactId>mssql-jdbc</artifactId>
-            <version>13.4.0.jre11</version>
+            <version>${mssql.jdbc.version}</version>
         </dependency>
 
         <!-- Giao diện Swing hiện đại -->
         <dependency>
             <groupId>com.formdev</groupId>
             <artifactId>flatlaf</artifactId>
-            <version>3.7</version>
+            <version>${flatlaf.version}</version>
         </dependency>
 
-        <!-- Layout linh hoạt -->
+        <!-- MigLayout -->
         <dependency>
             <groupId>com.miglayout</groupId>
             <artifactId>miglayout-swing</artifactId>
-            <version>11.4.2</version>
+            <version>${miglayout.version}</version>
         </dependency>
 
-        <!-- Icon -->
+        <!-- Ikonli Swing -->
         <dependency>
             <groupId>org.kordamp.ikonli</groupId>
             <artifactId>ikonli-swing</artifactId>
-            <version>12.4.0</version>
+            <version>${ikonli.version}</version>
         </dependency>
 
+        <!-- Font Awesome Icons -->
         <dependency>
             <groupId>org.kordamp.ikonli</groupId>
             <artifactId>ikonli-fontawesome5-pack</artifactId>
-            <version>12.4.0</version>
+            <version>${ikonli.version}</version>
         </dependency>
 
         <!-- Biểu đồ -->
         <dependency>
             <groupId>org.jfree</groupId>
             <artifactId>jfreechart</artifactId>
-            <version>1.5.6</version>
+            <version>${jfreechart.version}</version>
+        </dependency>
+
+        <!-- Jakarta Mail + SMTP Provider -->
+        <dependency>
+            <groupId>org.eclipse.angus</groupId>
+            <artifactId>jakarta.mail</artifactId>
+            <version>${jakarta.mail.version}</version>
         </dependency>
 
     </dependencies>
 
     <build>
         <plugins>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -71,8 +87,10 @@
 
                 <configuration>
                     <release>17</release>
+                    <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
+
         </plugins>
     </build>
 

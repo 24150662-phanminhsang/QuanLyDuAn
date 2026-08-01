@@ -4,8 +4,11 @@ import dao.UserDAO;
 import model.AccountStatus;
 import model.Role;
 import model.User;
+import util.PasswordUtil;
+import util.SessionManager;
 import view.AdminDashboardView;
 import view.LoginView;
+import view.StudentDashboardView;
 
 import javax.swing.*;
 import java.awt.*;
@@ -35,7 +38,7 @@ public class LoginController {
     }
 
     private void login() {
-        String username = loginView.getUsername();
+        String username = loginView.getUsername().trim();
         char[] passwordChars = loginView.getPassword();
         String password = new String(passwordChars);
 
@@ -61,7 +64,7 @@ public class LoginController {
                 return;
             }
 
-            if (!util.PasswordUtil.matches(
+            if (!PasswordUtil.matches(
                     password,
                     user.getPasswordHash()
             )) {
@@ -73,6 +76,18 @@ public class LoginController {
                 showAccountStatusMessage(user.getStatus());
                 return;
             }
+
+            if (user.getRole() == null) {
+                JOptionPane.showMessageDialog(
+                        loginView,
+                        "Tài khoản chưa được gán vai trò.",
+                        "Không thể đăng nhập",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+
+            SessionManager.login(user);
 
             openDashboard(user);
 
@@ -87,6 +102,18 @@ public class LoginController {
                     "Lỗi cơ sở dữ liệu",
                     JOptionPane.ERROR_MESSAGE
             );
+
+        } catch (RuntimeException exception) {
+            exception.printStackTrace();
+
+            JOptionPane.showMessageDialog(
+                    loginView,
+                    "Đã xảy ra lỗi khi đăng nhập.\n"
+                            + exception.getMessage(),
+                    "Lỗi hệ thống",
+                    JOptionPane.ERROR_MESSAGE
+            );
+
         } finally {
             Arrays.fill(passwordChars, '\0');
             setLoginLoading(false);
@@ -96,31 +123,15 @@ public class LoginController {
     private void openDashboard(User user) {
         Role role = user.getRole();
 
-        if (role == null) {
-            JOptionPane.showMessageDialog(
-                    loginView,
-                    "Tài khoản chưa được gán vai trò.",
-                    "Không thể đăng nhập",
-                    JOptionPane.WARNING_MESSAGE
-            );
-            return;
-        }
-
         switch (role) {
             case ADMIN -> openAdminDashboard(user);
+
+            case STUDENT -> openStudentDashboard(user);
 
             case TEACHER -> JOptionPane.showMessageDialog(
                     loginView,
                     "Đăng nhập thành công với vai trò TEACHER.\n"
-                            + "Giao diện giáo viên chưa được hoàn thiện.",
-                    "Đăng nhập thành công",
-                    JOptionPane.INFORMATION_MESSAGE
-            );
-
-            case STUDENT -> JOptionPane.showMessageDialog(
-                    loginView,
-                    "Đăng nhập thành công với vai trò STUDENT.\n"
-                            + "Giao diện sinh viên chưa được hoàn thiện.",
+                            + "Giao diện giảng viên chưa được hoàn thiện.",
                     "Đăng nhập thành công",
                     JOptionPane.INFORMATION_MESSAGE
             );
@@ -152,6 +163,45 @@ public class LoginController {
         });
     }
 
+    private void openStudentDashboard(User user) {
+        JOptionPane.showMessageDialog(
+                loginView,
+                "Xin chào, " + user.getFullName() + "!",
+                "Đăng nhập thành công",
+                JOptionPane.INFORMATION_MESSAGE
+        );
+
+        loginView.dispose();
+
+        SwingUtilities.invokeLater(() -> {
+            StudentDashboardView dashboard =
+                    new StudentDashboardView();
+
+            dashboard.setStudentName(
+                    user.getFullName()
+            );
+
+            JFrame frame = new JFrame(
+                    "Hệ thống quản lý khóa học - Sinh viên"
+            );
+
+            frame.setDefaultCloseOperation(
+                    WindowConstants.EXIT_ON_CLOSE
+            );
+
+            frame.setContentPane(dashboard);
+
+            frame.setSize(1200, 750);
+
+            frame.setMinimumSize(
+                    new Dimension(950, 600)
+            );
+
+            frame.setLocationRelativeTo(null);
+            frame.setVisible(true);
+        });
+    }
+
     private void showLoginFailed() {
         JOptionPane.showMessageDialog(
                 loginView,
@@ -161,6 +211,7 @@ public class LoginController {
         );
 
         loginView.clearPassword();
+        loginView.getTxtPassword().requestFocusInWindow();
     }
 
     private void showAccountStatusMessage(
@@ -191,7 +242,9 @@ public class LoginController {
         loginView.getTxtPassword().setEnabled(!loading);
 
         loginView.getBtnLogin().setText(
-                loading ? "Đang đăng nhập..." : "Đăng nhập"
+                loading
+                        ? "Đang đăng nhập..."
+                        : "Đăng nhập"
         );
 
         loginView.setCursor(

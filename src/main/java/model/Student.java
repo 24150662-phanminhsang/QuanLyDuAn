@@ -5,9 +5,12 @@ import java.sql.Timestamp;
 
 public class Student {
 
-    private int studentID;
+    private int studentId;
     private String studentCode;
+
+    // Liên kết sang bảng Users
     private Integer userId;
+
     private String fullName;
     private Date dateOfBirth;
     private String gender;
@@ -15,27 +18,29 @@ public class Student {
     private String phone;
     private String address;
     private String status;
-    private Timestamp createdAt;
 
-    // Constructor rỗng
+    private Timestamp createdAt;
+    private Timestamp updatedAt;
+
     public Student() {
         this.status = "ACTIVE";
     }
 
-    // Constructor đầy đủ
-    public Student(int studentID,
-                   String studentCode,
-                   Integer userId,
-                   String fullName,
-                   Date dateOfBirth,
-                   String gender,
-                   String email,
-                   String phone,
-                   String address,
-                   String status,
-                   Timestamp createdAt) {
-
-        this.studentID = studentID;
+    public Student(
+            int studentId,
+            String studentCode,
+            Integer userId,
+            String fullName,
+            Date dateOfBirth,
+            String gender,
+            String email,
+            String phone,
+            String address,
+            String status,
+            Timestamp createdAt,
+            Timestamp updatedAt
+    ) {
+        this.studentId = studentId;
         this.studentCode = studentCode;
         this.userId = userId;
         this.fullName = fullName;
@@ -44,40 +49,50 @@ public class Student {
         this.email = email;
         this.phone = phone;
         this.address = address;
-        this.status = status;
+        setStatus(status);
         this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
     }
 
-    // ================= ID =================
+    // ===========================
+    // Student ID
+    // ===========================
+
+    public int getStudentId() {
+        return studentId;
+    }
 
     public int getStudentID() {
-        return studentID;
+        return studentId;
     }
 
-    public void setStudentID(int studentID) {
-        this.studentID = studentID;
+    public void setStudentId(int studentId) {
+        this.studentId = studentId;
     }
 
-    // Tương thích nếu nơi khác dùng StudentId
-    public int getStudentId() {
-        return studentID;
+    public void setStudentID(int studentId) {
+        this.studentId = studentId;
     }
 
-    public void setStudentId(int studentID) {
-        this.studentID = studentID;
-    }
-
-    // ================= Student Code =================
+    // ===========================
+    // Student Code
+    // ===========================
 
     public String getStudentCode() {
         return studentCode;
     }
 
     public void setStudentCode(String studentCode) {
-        this.studentCode = studentCode;
+        if (studentCode == null || studentCode.isBlank()) {
+            this.studentCode = null;
+        } else {
+            this.studentCode = studentCode.trim().toUpperCase();
+        }
     }
 
-    // ================= User =================
+    // ===========================
+    // User ID
+    // ===========================
 
     public Integer getUserId() {
         return userId;
@@ -87,17 +102,24 @@ public class Student {
         this.userId = userId;
     }
 
-    // ================= Full Name =================
+    // ===========================
+    // Full Name
+    // ===========================
 
     public String getFullName() {
         return fullName;
     }
 
     public void setFullName(String fullName) {
-        this.fullName = fullName;
+        this.fullName =
+                fullName == null
+                        ? null
+                        : fullName.trim();
     }
 
-    // ================= Date Of Birth =================
+    // ===========================
+    // Date Of Birth
+    // ===========================
 
     public Date getDateOfBirth() {
         return dateOfBirth;
@@ -107,54 +129,75 @@ public class Student {
         this.dateOfBirth = dateOfBirth;
     }
 
-    // ================= Gender =================
+    // ===========================
+    // Gender
+    // ===========================
 
     public String getGender() {
         return gender;
     }
 
     public void setGender(String gender) {
-        this.gender = gender;
+        this.gender =
+                gender == null || gender.isBlank()
+                        ? null
+                        : gender.trim().toUpperCase();
     }
 
-    // ================= Email =================
+    // ===========================
+    // Email
+    // ===========================
 
     public String getEmail() {
         return email;
     }
 
     public void setEmail(String email) {
-        this.email = email;
+        this.email =
+                email == null || email.isBlank()
+                        ? null
+                        : email.trim().toLowerCase();
     }
 
-    // ================= Phone =================
+    // ===========================
+    // Phone
+    // ===========================
 
     public String getPhone() {
         return phone;
     }
 
     public void setPhone(String phone) {
-        this.phone = phone;
+        this.phone =
+                phone == null || phone.isBlank()
+                        ? null
+                        : phone.trim();
     }
 
-    // ================= Address =================
+    // ===========================
+    // Address
+    // ===========================
 
     public String getAddress() {
         return address;
     }
 
     public void setAddress(String address) {
-        this.address = address;
+        this.address =
+                address == null || address.isBlank()
+                        ? null
+                        : address.trim();
     }
 
-    // ================= Status =================
+    // ===========================
+    // Status
+    // ===========================
 
     public String getStatus() {
         return status;
     }
 
     public void setStatus(String status) {
-
         if (status == null || status.isBlank()) {
             this.status = "ACTIVE";
         } else {
@@ -162,7 +205,9 @@ public class Student {
         }
     }
 
-    // ================= Created At =================
+    // ===========================
+    // Created At
+    // ===========================
 
     public Timestamp getCreatedAt() {
         return createdAt;
@@ -172,14 +217,24 @@ public class Student {
         this.createdAt = createdAt;
     }
 
+    // ===========================
+    // Updated At
+    // ===========================
+
+    public Timestamp getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Timestamp updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
     @Override
     public String toString() {
-
         if (studentCode == null || studentCode.isBlank()) {
             return fullName;
         }
 
         return studentCode + " - " + fullName;
     }
-
 }
