@@ -115,11 +115,34 @@ public class GradeManagementView extends JPanel {
     }
 
     private void loadGradesByClass(int classId) {
-        tableModel.setRowCount(0); // Xóa bảng cũ
-        List<Grade> list = gradeService.getGradesByClass(classId);
+
+        tableModel.setRowCount(0);
+
+        if (classId <= 0) {
+            return;
+        }
+
+        List<Grade> list =
+                gradeService.getGradesByClass(
+                        classId
+                );
+
+        if (list == null) {
+            return;
+        }
+
         int stt = 1;
+
         for (Grade g : list) {
-            tableModel.addRow(new Object[]{stt++, g.getStudentId(), g.getClassId(), g.getScore()});
+
+            tableModel.addRow(
+                    new Object[]{
+                            stt++,
+                            g.getStudentId(),
+                            g.getClassId(),
+                            g.getScore()
+                    }
+            );
         }
     }
 }

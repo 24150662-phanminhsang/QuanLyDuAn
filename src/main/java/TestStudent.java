@@ -2,7 +2,7 @@ import view.StudentDashboardView;
 
 import javax.swing.SwingUtilities;
 
-public class testStudent {
+public class TestStudent {
 
     public static void main(String[] args) {
 

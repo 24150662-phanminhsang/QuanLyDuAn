@@ -1,28 +1,31 @@
 package service;
 
-import dao.PaymentDAO;
-import dao.impl.PaymentDAOImpl;
+import model.Discount;
 import model.Payment;
 
 import java.util.List;
 
-public class PaymentService {
-    private final PaymentDAO paymentDAO = new PaymentDAOImpl();
+public interface PaymentService {
 
-    public boolean processPayment(Payment payment) {
-        return paymentDAO.insert(payment);
-    }
+    boolean createPayment(Payment payment);
 
-    public boolean updatePaymentStatus(int paymentId, String status) {
-        return paymentDAO.updateStatus(paymentId, status);
-    }
+    boolean applyDiscount(
+            Payment payment,
+            Discount discount
+    );
 
-    public List<Payment> getAllPayments() {
-        return paymentDAO.getAll();
-    }
-    public boolean confirmPayment(int paymentId) {
-        // Gọi xuống PaymentDAO để cập nhật trạng thái thanh toán thành đã thanh toán
-        // trả về true nếu cập nhật thành công
-        return true;
-    }
+    boolean makePayment(
+            int paymentId,
+            double amount,
+            String paymentMethod,
+            String transactionCode
+    );
+
+    boolean cancelPayment(int paymentId);
+
+    Payment getById(int paymentId);
+
+    Payment getByEnrollmentId(int enrollmentId);
+
+    List<Payment> getAll();
 }

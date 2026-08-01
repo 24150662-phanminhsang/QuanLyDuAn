@@ -1,40 +1,27 @@
 import com.formdev.flatlaf.FlatLightLaf;
-import view.TeacherManagementView;
-import javax.swing.JOptionPane;
+import view.TeacherMainDashboard;
 
-import javax.swing.JFrame;
-import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
+import javax.swing.*;
 
 public class TestTeacherManagement {
-
     public static void main(String[] args) {
+        // 1. Kích hoạt giao diện FlatLaf
+        FlatLightLaf.setup();
+
         SwingUtilities.invokeLater(() -> {
-            try {
-                UIManager.setLookAndFeel(new FlatLightLaf());
+            JFrame frame = new JFrame("Test Teacher Management - Dashboard");
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            frame.setSize(1300, 750);
+            frame.setLocationRelativeTo(null);
 
-                JFrame frame = new JFrame("Test Teacher Management");
-                frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-                frame.setSize(1400, 800);
-                frame.setLocationRelativeTo(null);
+            // 2. Gọi Dashboard tổng (chứa Sidebar + Header)
+            TeacherMainDashboard dashboard = new TeacherMainDashboard();
 
-                TeacherManagementView teacherManagementView =
-                        new TeacherManagementView();
+            // 3. Chuyển ngay sang Card/Màn hình "Quản lý giảng viên"
+            dashboard.showCard("TEACHER_MANAGEMENT");
 
-                frame.setContentPane(teacherManagementView);
-                frame.setVisible(true);
-
-            } catch (Exception e) {
-                e.printStackTrace();
-
-                JOptionPane.showMessageDialog(
-                        null,
-                        "Không thể mở TeacherManagementView:\n"
-                                + e.getMessage(),
-                        "Lỗi",
-                        JOptionPane.ERROR_MESSAGE
-                );
-            }
+            frame.add(dashboard);
+            frame.setVisible(true);
         });
     }
 }

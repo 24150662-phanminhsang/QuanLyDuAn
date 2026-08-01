@@ -1,19 +1,23 @@
-
-import view.TeacherDashboardView;
+import com.formdev.flatlaf.FlatLightLaf;
+import view.TeacherMainDashboard; // Import đúng lớp Main Dashboard
 
 import javax.swing.*;
 
 public class testTeacher {
     public static void main(String[] args) {
-        // Đảm bảo giao diện khởi chạy trên luồng sự kiện của Swing (EDT)
+        // 1. Kích hoạt giao diện FlatLaf trước khi tạo JFrame
+        FlatLightLaf.setup();
+
         SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Kiểm tra - Teacher Dashboard");
+            JFrame frame = new JFrame("CourseManager - Teacher Dashboard");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            frame.setSize(1100, 650);
+            frame.setSize(1200, 700);
             frame.setLocationRelativeTo(null);
 
-            // Gắn TeacherDashboardView làm nội dung chính của cửa sổ
-            frame.setContentPane(new TeacherDashboardView());
+            // 2. CHÚ Ý: Phải 'new TeacherMainDashboard()' (chứa Sidebar + Header)
+            // Thay vì 'new TeacherDashboardView()' (chỉ chứa bảng)
+            TeacherMainDashboard mainDashboard = new TeacherMainDashboard();
+            frame.add(mainDashboard);
 
             frame.setVisible(true);
         });
