@@ -5,7 +5,12 @@ import java.sql.Timestamp;
 public class Grade {
 
     private int gradeId;
+
     private int enrollmentId;
+
+    // dùng cho View
+    private int studentId;
+    private int classId;
 
     private Double attendanceScore;
     private Double midtermScore;
@@ -13,29 +18,10 @@ public class Grade {
     private Double averageScore;
 
     private String result;
+
     private Timestamp updatedAt;
 
     public Grade() {
-    }
-
-    public Grade(
-            int gradeId,
-            int enrollmentId,
-            Double attendanceScore,
-            Double midtermScore,
-            Double finalScore,
-            Double averageScore,
-            String result,
-            Timestamp updatedAt
-    ) {
-        this.gradeId = gradeId;
-        this.enrollmentId = enrollmentId;
-        this.attendanceScore = attendanceScore;
-        this.midtermScore = midtermScore;
-        this.finalScore = finalScore;
-        this.averageScore = averageScore;
-        this.result = result;
-        this.updatedAt = updatedAt;
     }
 
     public int getGradeId() {
@@ -54,49 +40,93 @@ public class Grade {
         this.enrollmentId = enrollmentId;
     }
 
+    //=========================
+    // Student
+    //=========================
+
+    public int getStudentId() {
+        return studentId;
+    }
+
+    public void setStudentId(int studentId) {
+        this.studentId = studentId;
+    }
+
+    //=========================
+    // Class
+    //=========================
+
+    public int getClassId() {
+        return classId;
+    }
+
+    public void setClassId(int classId) {
+        this.classId = classId;
+    }
+
+    //=========================
+    // Attendance
+    //=========================
+
     public Double getAttendanceScore() {
         return attendanceScore;
     }
 
     public void setAttendanceScore(Double attendanceScore) {
-        this.attendanceScore = validateScore(attendanceScore);
+        this.attendanceScore = attendanceScore;
     }
+
+    //=========================
+    // Midterm
+    //=========================
 
     public Double getMidtermScore() {
         return midtermScore;
     }
 
     public void setMidtermScore(Double midtermScore) {
-        this.midtermScore = validateScore(midtermScore);
+        this.midtermScore = midtermScore;
     }
+
+    //=========================
+    // Final
+    //=========================
 
     public Double getFinalScore() {
         return finalScore;
     }
 
     public void setFinalScore(Double finalScore) {
-        this.finalScore = validateScore(finalScore);
+        this.finalScore = finalScore;
     }
+
+    //=========================
+    // Average
+    //=========================
 
     public Double getAverageScore() {
         return averageScore;
     }
 
     public void setAverageScore(Double averageScore) {
-        this.averageScore = validateScore(averageScore);
+        this.averageScore = averageScore;
     }
+
+    //=========================
+    // Result
+    //=========================
 
     public String getResult() {
         return result;
     }
 
     public void setResult(String result) {
-        if (result == null || result.isBlank()) {
-            this.result = null;
-        } else {
-            this.result = result.trim().toUpperCase();
-        }
+        this.result = result;
     }
+
+    //=========================
+    // Updated At
+    //=========================
 
     public Timestamp getUpdatedAt() {
         return updatedAt;
@@ -104,19 +134,5 @@ public class Grade {
 
     public void setUpdatedAt(Timestamp updatedAt) {
         this.updatedAt = updatedAt;
-    }
-
-    private Double validateScore(Double score) {
-        if (score == null) {
-            return null;
-        }
-
-        if (score < 0 || score > 10) {
-            throw new IllegalArgumentException(
-                    "Điểm phải nằm trong khoảng từ 0 đến 10."
-            );
-        }
-
-        return score;
     }
 }

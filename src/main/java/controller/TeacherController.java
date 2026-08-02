@@ -1,133 +1,177 @@
 package controller;
 
-import dao.TeacherDAO;
-import dao.impl.TeacherDAOImpl;
 import model.Teacher;
+import service.TeacherService;
 
 import java.util.Collections;
 import java.util.List;
 
 public class TeacherController {
 
-    private final TeacherDAO teacherDAO;
+    private final TeacherService teacherService;
 
     public TeacherController() {
-        this.teacherDAO = new TeacherDAOImpl();
+        this(new TeacherService());
     }
 
-    public TeacherController(TeacherDAO teacherDAO) {
-        if (teacherDAO == null) {
+    public TeacherController(
+            TeacherService teacherService
+    ) {
+        if (teacherService == null) {
             throw new IllegalArgumentException(
-                    "TeacherDAO không được null"
+                    "TeacherService không được null."
             );
         }
 
-        this.teacherDAO = teacherDAO;
+        this.teacherService = teacherService;
     }
 
-    public List<Teacher> getAllTeachers() {
-        try {
-            List<Teacher> teachers = teacherDAO.getAll();
-
-            return teachers == null
-                    ? Collections.emptyList()
-                    : teachers;
-
-        } catch (RuntimeException e) {
-            throw new RuntimeException(
-                    "Không thể tải danh sách giảng viên.",
-                    e
-            );
-        }
-    }
-
-    public Teacher getTeacherById(int teacherId) {
-        validateId(teacherId);
-
-        try {
-            return teacherDAO.getById(teacherId);
-
-        } catch (RuntimeException e) {
-            throw new RuntimeException(
-                    "Không thể lấy thông tin giảng viên.",
-                    e
-            );
-        }
-    }
-
-    public Teacher getTeacherByUserId(int userId) {
-        if (userId <= 0) {
-            throw new IllegalArgumentException(
-                    "User ID phải lớn hơn 0."
-            );
-        }
-
-        try {
-            return teacherDAO.getByUserId(userId);
-
-        } catch (RuntimeException e) {
-            throw new RuntimeException(
-                    "Không thể lấy giảng viên theo tài khoản.",
-                    e
-            );
-        }
+    public boolean createTeacherAccount(
+            Teacher teacher,
+            String username,
+            String password,
+            String confirmPassword
+    ) {
+        return teacherService.createTeacherAccount(
+                teacher,
+                username,
+                password,
+                confirmPassword
+        );
     }
 
     public boolean addTeacher(Teacher teacher) {
-        validateTeacher(teacher);
-
-        try {
-            return teacherDAO.insert(teacher);
-
-        } catch (RuntimeException e) {
-            throw new RuntimeException(
-                    "Không thể thêm giảng viên.",
-                    e
-            );
-        }
+        return teacherService.addTeacher(teacher);
     }
 
     public boolean updateTeacher(Teacher teacher) {
-        validateTeacher(teacher);
+        return teacherService.updateTeacher(teacher);
+    }
 
-        try {
-            return teacherDAO.update(teacher);
+    public boolean updateTeacherAndUser(
+            Teacher teacher
+    ) {
+        return teacherService.updateTeacherAndUser(
+                teacher
+        );
+    }
 
-        } catch (RuntimeException e) {
-            throw new RuntimeException(
-                    "Không thể cập nhật giảng viên.",
-                    e
-            );
-        }
+    public boolean updateProfile(Teacher teacher) {
+        return updateTeacherAndUser(teacher);
     }
 
     public boolean deleteTeacher(int teacherId) {
-        validateId(teacherId);
-
-        try {
-            return teacherDAO.delete(teacherId);
-
-        } catch (RuntimeException e) {
-            throw new RuntimeException(
-                    "Không thể xóa giảng viên.",
-                    e
-            );
-        }
+        return teacherService.deleteTeacher(
+                teacherId
+        );
     }
 
-    private void validateTeacher(Teacher teacher) {
-        if (teacher == null) {
-            throw new IllegalArgumentException(
-                    "Thông tin giảng viên không được null."
-            );
-        }
+    public boolean canDeleteTeacher(int teacherId) {
+        return teacherService.canDeleteTeacher(
+                teacherId
+        );
     }
 
-    private void validateId(int teacherId) {
-        if (teacherId <= 0) {
-            throw new IllegalArgumentException(
-                    "Teacher ID phải lớn hơn 0."
-            );
-        }
+    public Teacher getTeacherById(int teacherId) {
+        return teacherService.getTeacherById(
+                teacherId
+        );
+    }
+
+    public Teacher getTeacherByUserId(int userId) {
+        return teacherService.getTeacherByUserId(
+                userId
+        );
+    }
+
+    public Teacher getTeacherByCode(String code) {
+        return teacherService.getTeacherByCode(code);
+    }
+
+    public List<Teacher> getAllTeachers() {
+        List<Teacher> list =
+                teacherService.getAllTeachers();
+
+        return list == null
+                ? Collections.emptyList()
+                : list;
+    }
+
+    public List<Teacher> searchTeachers(
+            String keyword
+    ) {
+        List<Teacher> list =
+                teacherService.searchTeachers(keyword);
+
+        return list == null
+                ? Collections.emptyList()
+                : list;
+    }
+
+    public List<Teacher> getTeachersByStatus(
+            String status
+    ) {
+        List<Teacher> list =
+                teacherService.getTeachersByStatus(status);
+
+        return list == null
+                ? Collections.emptyList()
+                : list;
+    }
+
+    public List<Teacher> getActiveTeachers() {
+        return getTeachersByStatus("ACTIVE");
+    }
+
+    public List<Teacher> getInactiveTeachers() {
+        return getTeachersByStatus("INACTIVE");
+    }
+
+    public boolean activateTeacher(int teacherId) {
+        return teacherService.activateTeacher(
+                teacherId
+        );
+    }
+
+    public boolean deactivateTeacher(int teacherId) {
+        return teacherService.deactivateTeacher(
+                teacherId
+        );
+    }
+
+    public boolean updateTeacherStatus(
+            int teacherId,
+            String status
+    ) {
+        return teacherService.updateTeacherStatus(
+                teacherId,
+                status
+        );
+    }
+
+    public boolean hasAssignedClasses(int teacherId) {
+        return teacherService.hasAssignedClasses(
+                teacherId
+        );
+    }
+
+    public int countAssignedClasses(int teacherId) {
+        return teacherService.countAssignedClasses(
+                teacherId
+        );
+    }
+
+    public int countActiveClasses(int teacherId) {
+        return teacherService.countActiveClasses(
+                teacherId
+        );
+    }
+
+    public boolean existsByTeacherCode(String code) {
+        return teacherService.existsByTeacherCode(code);
+    }
+
+    public boolean existsByUserId(int userId) {
+        return teacherService.existsByUserId(userId);
     }
 }

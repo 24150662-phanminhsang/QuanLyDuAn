@@ -9,7 +9,7 @@ import util.UIConstants;
 import view.components.NotificationPopup;
 import view.components.SidebarButton;
 import view.components.SidebarPanel;
-import controller.DashboardController;
+
 
 
 import javax.swing.BorderFactory;
@@ -37,13 +37,19 @@ public class AdminDashboardView extends JFrame {
     private static final String DASHBOARD_CARD = "DASHBOARD";
     private static final String USERS_CARD = "USERS";
     private static final String STUDENTS_CARD = "STUDENTS";
+    private static final String TEACHERS_CARD = "TEACHERS";
     private static final String COURSES_CARD = "COURSES";
+    private static final String CLASSES_CARD = "CLASSES";
+    private static final String PAYMENTS_CARD = "PAYMENTS";
 
 
     private static final int DASHBOARD_MENU_INDEX = 0;
     private static final int USERS_MENU_INDEX = 1;
     private static final int STUDENTS_MENU_INDEX = 2;
+    private static final int TEACHERS_MENU_INDEX = 3;
     private static final int COURSES_MENU_INDEX = 4;
+    private static final int CLASSES_MENU_INDEX = 5;
+    private static final int PAYMENTS_MENU_INDEX = 6;
 
 
     private final CardLayout cardLayout;
@@ -57,7 +63,10 @@ public class AdminDashboardView extends JFrame {
     private final StatisticsView statisticsView;
     private final UserManagementView userManagementView;
     private final StudentManagementView studentManagementView;
+    private final TeacherManagementView teacherManagementView;
     private final CourseManagementView courseManagementView;
+    private final ClassManagementView classManagementView;
+    private final PaymentManagementView paymentManagementView;
 
 
     private final List<SidebarButton> menuButtons;
@@ -106,8 +115,18 @@ public class AdminDashboardView extends JFrame {
                 new StudentManagementView();
 
 
+        teacherManagementView =
+                new TeacherManagementView();
+
+
         courseManagementView =
                 new CourseManagementView();
+        classManagementView=
+                new ClassManagementView();
+
+
+        paymentManagementView =
+                new PaymentManagementView();
 
 
         /*
@@ -118,9 +137,7 @@ public class AdminDashboardView extends JFrame {
         );
 
 
-        new DashboardController(
-                courseManagementView
-        );
+
 
 
         menuButtons = new ArrayList<>();
@@ -252,9 +269,31 @@ public class AdminDashboardView extends JFrame {
 
         contentPanel.add(
                 createContentScrollPane(
+                        teacherManagementView
+                ),
+                TEACHERS_CARD
+        );
+
+
+        contentPanel.add(
+                createContentScrollPane(
                         courseManagementView
                 ),
                 COURSES_CARD
+        );
+        contentPanel.add(
+                createContentScrollPane(
+                        classManagementView
+                ),
+                CLASSES_CARD
+        );
+
+
+        contentPanel.add(
+                createContentScrollPane(
+                        paymentManagementView
+                ),
+                PAYMENTS_CARD
         );
     }
 
@@ -428,23 +467,17 @@ public class AdminDashboardView extends JFrame {
 
 
         teacherButton.addActionListener(
-                event -> showPendingFeature(
-                        "Quản lý giảng viên"
-                )
+                event -> showTeachers()
         );
 
 
         classButton.addActionListener(
-                event -> showPendingFeature(
-                        "Quản lý lớp học"
-                )
+                event -> showClasses()
         );
 
 
         paymentButton.addActionListener(
-                event -> showPendingFeature(
-                        "Quản lý thanh toán"
-                )
+                event -> showPayments()
         );
 
 
@@ -453,9 +486,9 @@ public class AdminDashboardView extends JFrame {
         );
 
 
-        teacherButton.setPending(true);
-        classButton.setPending(true);
-        paymentButton.setPending(true);
+        teacherButton.setPending(false);
+        classButton.setPending(false);
+        paymentButton.setPending(false);
 
 
         sidebar.add(dashboardButton);
@@ -979,7 +1012,7 @@ public class AdminDashboardView extends JFrame {
         notificationButton.setToolTipText(
                 unreadCount > 0
                         ? unreadCount
-                          + " thông báo chưa đọc"
+                        + " thông báo chưa đọc"
                         : "Không có thông báo chưa đọc"
         );
 
@@ -1063,6 +1096,24 @@ public class AdminDashboardView extends JFrame {
     }
 
 
+
+    private void showTeachers() {
+        cardLayout.show(
+                contentPanel,
+                TEACHERS_CARD
+        );
+
+        pageTitleLabel.setText(
+                "Quản lý giảng viên"
+        );
+
+        selectMenuButton(
+                TEACHERS_MENU_INDEX
+        );
+
+        teacherManagementView.loadTeachers();
+    }
+
     private void showCourses() {
         cardLayout.show(
                 contentPanel,
@@ -1078,6 +1129,42 @@ public class AdminDashboardView extends JFrame {
         selectMenuButton(
                 COURSES_MENU_INDEX
         );
+    }
+    private void showClasses() {
+
+        cardLayout.show(
+                contentPanel,
+                CLASSES_CARD
+        );
+
+        pageTitleLabel.setText(
+                "Quản lý lớp học"
+        );
+
+        selectMenuButton(
+                CLASSES_MENU_INDEX
+        );
+
+        classManagementView.loadData();
+
+    }
+
+
+    private void showPayments() {
+        cardLayout.show(
+                contentPanel,
+                PAYMENTS_CARD
+        );
+
+        pageTitleLabel.setText(
+                "Quản lý thanh toán"
+        );
+
+        selectMenuButton(
+                PAYMENTS_MENU_INDEX
+        );
+
+        paymentManagementView.loadPayments();
     }
 
 
@@ -1101,20 +1188,20 @@ public class AdminDashboardView extends JFrame {
                     showStudents();
 
 
+            case "TEACHERS", "ADD_TEACHER" ->
+                    showTeachers();
+
+
             case "COURSES", "ADD_COURSE" ->
                     showCourses();
 
 
             case "CLASSES" ->
-                    showPendingFeature(
-                            "Quản lý lớp học"
-                    );
+                    showClasses();
 
 
-            case "PAYMENTS" ->
-                    showPendingFeature(
-                            "Quản lý thanh toán"
-                    );
+            case "PAYMENTS", "ADD_PAYMENT" ->
+                    showPayments();
 
 
             case "REPORTS" ->

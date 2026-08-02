@@ -28,4 +28,16 @@ public interface PaymentService {
     Payment getByEnrollmentId(int enrollmentId);
 
     List<Payment> getAll();
+
+    List<Payment> getByStudentId(int studentId);
+
+    double getTotalAmountByStudent(int studentId);
+
+    double getTotalPaidByStudent(int studentId);
+
+    double getTotalRemainingByStudent(int studentId);
+    boolean removeUnpaidEnrollment(
+            int studentId,
+            int enrollmentId
+    );
 }

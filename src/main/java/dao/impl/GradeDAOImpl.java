@@ -13,20 +13,28 @@ public class GradeDAOImpl implements GradeDAO {
     private static final String BASE_SELECT =
             """
             SELECT
-                grade_id,
-                enrollment_id,
-                attendance_score,
-                midterm_score,
-                final_score,
-                average_score,
-                result,
-                updated_at
-            FROM Grades
-            """;
 
+                g.grade_id,
+                g.enrollment_id,
+
+                e.student_id,
+                e.class_id,
+
+                g.attendance_score,
+                g.midterm_score,
+                g.final_score,
+                g.average_score,
+
+                g.result,
+                g.updated_at
+
+            FROM Grades g
+
+            INNER JOIN Enrollments e
+                    ON g.enrollment_id = e.enrollment_id
+            """;
     @Override
     public boolean insert(Grade grade) {
-        validateGrade(grade);
 
         String sql =
                 """
@@ -39,164 +47,179 @@ public class GradeDAOImpl implements GradeDAO {
                     average_score,
                     result
                 )
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES
+                (
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    ?
+                )
                 """;
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (
 
-            ps.setInt(1, grade.getEnrollmentId());
+                Connection conn =
+                        DBConnection.getConnection();
 
-            setNullableDouble(
-                    ps,
+                PreparedStatement ps =
+                        conn.prepareStatement(sql)
+
+        ) {
+
+            ps.setInt(
+                    1,
+                    grade.getEnrollmentId()
+            );
+
+            ps.setDouble(
                     2,
                     grade.getAttendanceScore()
             );
 
-            setNullableDouble(
-                    ps,
+            ps.setDouble(
                     3,
                     grade.getMidtermScore()
             );
 
-            setNullableDouble(
-                    ps,
+            ps.setDouble(
                     4,
                     grade.getFinalScore()
             );
 
-            Double averageScore =
-                    calculateAverageScore(grade);
-
-            setNullableDouble(
-                    ps,
+            ps.setDouble(
                     5,
-                    averageScore
+                    grade.getAverageScore()
             );
 
-            setNullableString(
-                    ps,
+            ps.setString(
                     6,
-                    determineResult(
-                            averageScore,
-                            grade.getResult()
-                    )
+                    grade.getResult()
             );
 
             return ps.executeUpdate() > 0;
 
-        } catch (SQLException e) {
-            throw new RuntimeException(
-                    "Không thể thêm điểm: " + e.getMessage(),
-                    e
-            );
         }
-    }
 
+        catch (SQLException e) {
+
+            throw new RuntimeException(e);
+
+        }
+
+    }
     @Override
     public boolean update(Grade grade) {
-        validateGrade(grade);
-
-        if (grade.getGradeId() <= 0) {
-            throw new IllegalArgumentException(
-                    "ID điểm không hợp lệ."
-            );
-        }
 
         String sql =
                 """
                 UPDATE Grades
+
                 SET
-                    enrollment_id = ?,
-                    attendance_score = ?,
-                    midterm_score = ?,
-                    final_score = ?,
-                    average_score = ?,
-                    result = ?,
-                    updated_at = SYSDATETIME()
-                WHERE grade_id = ?
+
+                    attendance_score=?,
+
+                    midterm_score=?,
+
+                    final_score=?,
+
+                    average_score=?,
+
+                    result=?,
+
+                    updated_at=SYSDATETIME()
+
+                WHERE grade_id=?
                 """;
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (
 
-            ps.setInt(1, grade.getEnrollmentId());
+                Connection conn =
+                        DBConnection.getConnection();
 
-            setNullableDouble(
-                    ps,
-                    2,
+                PreparedStatement ps =
+                        conn.prepareStatement(sql)
+
+        ) {
+
+            ps.setDouble(
+                    1,
                     grade.getAttendanceScore()
             );
 
-            setNullableDouble(
-                    ps,
-                    3,
+            ps.setDouble(
+                    2,
                     grade.getMidtermScore()
             );
 
-            setNullableDouble(
-                    ps,
-                    4,
+            ps.setDouble(
+                    3,
                     grade.getFinalScore()
             );
 
-            Double averageScore =
-                    calculateAverageScore(grade);
+            ps.setDouble(
+                    4,
+                    grade.getAverageScore()
+            );
 
-            setNullableDouble(
-                    ps,
+            ps.setString(
                     5,
-                    averageScore
+                    grade.getResult()
             );
 
-            setNullableString(
-                    ps,
+            ps.setInt(
                     6,
-                    determineResult(
-                            averageScore,
-                            grade.getResult()
-                    )
+                    grade.getGradeId()
             );
-
-            ps.setInt(7, grade.getGradeId());
 
             return ps.executeUpdate() > 0;
 
-        } catch (SQLException e) {
-            throw new RuntimeException(
-                    "Không thể cập nhật điểm: "
-                            + e.getMessage(),
-                    e
-            );
         }
-    }
 
+        catch (SQLException e) {
+
+            throw new RuntimeException(e);
+
+        }
+
+    }
     @Override
     public boolean delete(int gradeId) {
-        if (gradeId <= 0) {
-            throw new IllegalArgumentException(
-                    "ID điểm phải lớn hơn 0."
-            );
-        }
 
         String sql =
-                "DELETE FROM Grades WHERE grade_id = ?";
+                """
+                DELETE
+                FROM Grades
+                WHERE grade_id=?
+                """;
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (
 
-            ps.setInt(1, gradeId);
+                Connection conn =
+                        DBConnection.getConnection();
+
+                PreparedStatement ps =
+                        conn.prepareStatement(sql)
+
+        ) {
+
+            ps.setInt(
+                    1,
+                    gradeId
+            );
 
             return ps.executeUpdate() > 0;
 
-        } catch (SQLException e) {
-            throw new RuntimeException(
-                    "Không thể xóa điểm: " + e.getMessage(),
-                    e
-            );
         }
-    }
 
+        catch (SQLException e) {
+
+            throw new RuntimeException(e);
+
+        }
+
+    }
     @Override
     public Grade getById(int gradeId) {
         if (gradeId <= 0) {
@@ -205,22 +228,34 @@ public class GradeDAOImpl implements GradeDAO {
 
         String sql =
                 BASE_SELECT
-                        + " WHERE grade_id = ?";
+                        + """
+                        WHERE g.grade_id = ?
+                        """;
 
-        return querySingle(sql, gradeId);
+        return querySingle(
+                sql,
+                gradeId
+        );
     }
 
     @Override
-    public Grade getByEnrollmentId(int enrollmentId) {
+    public Grade getByEnrollmentId(
+            int enrollmentId
+    ) {
         if (enrollmentId <= 0) {
             return null;
         }
 
         String sql =
                 BASE_SELECT
-                        + " WHERE enrollment_id = ?";
+                        + """
+                        WHERE g.enrollment_id = ?
+                        """;
 
-        return querySingle(sql, enrollmentId);
+        return querySingle(
+                sql,
+                enrollmentId
+        );
     }
 
     @Override
@@ -228,41 +263,50 @@ public class GradeDAOImpl implements GradeDAO {
             int studentId,
             int classId
     ) {
+        if (studentId <= 0 || classId <= 0) {
+            return null;
+        }
+
         String sql =
-                """
-                SELECT
-                    g.grade_id,
-                    g.enrollment_id,
-                    g.attendance_score,
-                    g.midterm_score,
-                    g.final_score,
-                    g.average_score,
-                    g.result,
-                    g.updated_at
-                FROM Grades g
-                INNER JOIN Enrollments e
-                    ON g.enrollment_id = e.enrollment_id
-                WHERE e.student_id = ?
-                  AND e.class_id = ?
-                """;
+                BASE_SELECT
+                        + """
+                        WHERE e.student_id = ?
+                          AND e.class_id = ?
+                        """;
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
 
-            ps.setInt(1, studentId);
-            ps.setInt(2, classId);
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            statement.setInt(
+                    1,
+                    studentId
+            );
 
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return mapGrade(rs);
+            statement.setInt(
+                    2,
+                    classId
+            );
+
+            try (
+                    ResultSet resultSet =
+                            statement.executeQuery()
+            ) {
+                if (resultSet.next()) {
+                    return mapGrade(
+                            resultSet
+                    );
                 }
             }
 
-        } catch (SQLException e) {
+        } catch (SQLException exception) {
             throw new RuntimeException(
-                    "Không thể lấy điểm của học viên: "
-                            + e.getMessage(),
-                    e
+                    "Không thể lấy điểm của sinh viên: "
+                            + exception.getMessage(),
+                    exception
             );
         }
 
@@ -270,73 +314,82 @@ public class GradeDAOImpl implements GradeDAO {
     }
 
     @Override
-    public List<Grade> getByStudentId(int studentId) {
-        String sql =
-                """
-                SELECT
-                    g.grade_id,
-                    g.enrollment_id,
-                    g.attendance_score,
-                    g.midterm_score,
-                    g.final_score,
-                    g.average_score,
-                    g.result,
-                    g.updated_at
-                FROM Grades g
-                INNER JOIN Enrollments e
-                    ON g.enrollment_id = e.enrollment_id
-                WHERE e.student_id = ?
-                ORDER BY g.updated_at DESC
-                """;
+    public List<Grade> getByStudentId(
+            int studentId
+    ) {
+        if (studentId <= 0) {
+            return new ArrayList<>();
+        }
 
-        return queryList(sql, studentId);
+        String sql =
+                BASE_SELECT
+                        + """
+                        WHERE e.student_id = ?
+                        ORDER BY g.updated_at DESC,
+                                 g.grade_id DESC
+                        """;
+
+        return queryList(
+                sql,
+                studentId
+        );
     }
 
     @Override
-    public List<Grade> getByClassId(int classId) {
-        String sql =
-                """
-                SELECT
-                    g.grade_id,
-                    g.enrollment_id,
-                    g.attendance_score,
-                    g.midterm_score,
-                    g.final_score,
-                    g.average_score,
-                    g.result,
-                    g.updated_at
-                FROM Grades g
-                INNER JOIN Enrollments e
-                    ON g.enrollment_id = e.enrollment_id
-                WHERE e.class_id = ?
-                ORDER BY g.updated_at DESC
-                """;
+    public List<Grade> getByClassId(
+            int classId
+    ) {
+        if (classId <= 0) {
+            return new ArrayList<>();
+        }
 
-        return queryList(sql, classId);
+        String sql =
+                BASE_SELECT
+                        + """
+                        WHERE e.class_id = ?
+                        ORDER BY e.student_id ASC,
+                                 g.grade_id ASC
+                        """;
+
+        return queryList(
+                sql,
+                classId
+        );
     }
 
     @Override
     public List<Grade> getAll() {
         String sql =
                 BASE_SELECT
-                        + " ORDER BY updated_at DESC";
+                        + """
+                        ORDER BY g.updated_at DESC,
+                                 g.grade_id DESC
+                        """;
 
-        List<Grade> grades = new ArrayList<>();
+        List<Grade> grades =
+                new ArrayList<>();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps =
-                     conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
 
-            while (rs.next()) {
-                grades.add(mapGrade(rs));
+                PreparedStatement statement =
+                        connection.prepareStatement(sql);
+
+                ResultSet resultSet =
+                        statement.executeQuery()
+        ) {
+            while (resultSet.next()) {
+                grades.add(
+                        mapGrade(resultSet)
+                );
             }
 
-        } catch (SQLException e) {
+        } catch (SQLException exception) {
             throw new RuntimeException(
                     "Không thể tải danh sách điểm: "
-                            + e.getMessage(),
-                    e
+                            + exception.getMessage(),
+                    exception
             );
         }
 
@@ -347,23 +400,34 @@ public class GradeDAOImpl implements GradeDAO {
             String sql,
             int parameter
     ) {
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps =
-                     conn.prepareStatement(sql)) {
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
 
-            ps.setInt(1, parameter);
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            statement.setInt(
+                    1,
+                    parameter
+            );
 
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return mapGrade(rs);
+            try (
+                    ResultSet resultSet =
+                            statement.executeQuery()
+            ) {
+                if (resultSet.next()) {
+                    return mapGrade(
+                            resultSet
+                    );
                 }
             }
 
-        } catch (SQLException e) {
+        } catch (SQLException exception) {
             throw new RuntimeException(
                     "Không thể tải thông tin điểm: "
-                            + e.getMessage(),
-                    e
+                            + exception.getMessage(),
+                    exception
             );
         }
 
@@ -374,182 +438,136 @@ public class GradeDAOImpl implements GradeDAO {
             String sql,
             int parameter
     ) {
-        List<Grade> grades = new ArrayList<>();
+        List<Grade> grades =
+                new ArrayList<>();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps =
-                     conn.prepareStatement(sql)) {
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
 
-            ps.setInt(1, parameter);
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            statement.setInt(
+                    1,
+                    parameter
+            );
 
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    grades.add(mapGrade(rs));
+            try (
+                    ResultSet resultSet =
+                            statement.executeQuery()
+            ) {
+                while (resultSet.next()) {
+                    grades.add(
+                            mapGrade(resultSet)
+                    );
                 }
             }
 
-        } catch (SQLException e) {
+        } catch (SQLException exception) {
             throw new RuntimeException(
                     "Không thể tải danh sách điểm: "
-                            + e.getMessage(),
-                    e
+                            + exception.getMessage(),
+                    exception
             );
         }
 
         return grades;
     }
 
-    private Grade mapGrade(ResultSet rs)
-            throws SQLException {
+    private Grade mapGrade(
+            ResultSet resultSet
+    ) throws SQLException {
 
-        Grade grade = new Grade();
+        Grade grade =
+                new Grade();
 
         grade.setGradeId(
-                rs.getInt("grade_id")
+                resultSet.getInt(
+                        "grade_id"
+                )
         );
 
         grade.setEnrollmentId(
-                rs.getInt("enrollment_id")
+                resultSet.getInt(
+                        "enrollment_id"
+                )
+        );
+
+        grade.setStudentId(
+                resultSet.getInt(
+                        "student_id"
+                )
+        );
+
+        grade.setClassId(
+                resultSet.getInt(
+                        "class_id"
+                )
         );
 
         grade.setAttendanceScore(
                 getNullableDouble(
-                        rs,
+                        resultSet,
                         "attendance_score"
                 )
         );
 
         grade.setMidtermScore(
                 getNullableDouble(
-                        rs,
+                        resultSet,
                         "midterm_score"
                 )
         );
 
         grade.setFinalScore(
                 getNullableDouble(
-                        rs,
+                        resultSet,
                         "final_score"
                 )
         );
 
         grade.setAverageScore(
                 getNullableDouble(
-                        rs,
+                        resultSet,
                         "average_score"
                 )
         );
 
         grade.setResult(
-                rs.getString("result")
+                resultSet.getString(
+                        "result"
+                )
         );
 
         grade.setUpdatedAt(
-                rs.getTimestamp("updated_at")
+                resultSet.getTimestamp(
+                        "updated_at"
+                )
         );
 
         return grade;
     }
 
     private Double getNullableDouble(
-            ResultSet rs,
+            ResultSet resultSet,
             String columnName
     ) throws SQLException {
 
-        double value = rs.getDouble(columnName);
+        double value =
+                resultSet.getDouble(
+                        columnName
+                );
 
-        return rs.wasNull()
-                ? null
-                : value;
-    }
-
-    private void setNullableDouble(
-            PreparedStatement ps,
-            int index,
-            Double value
-    ) throws SQLException {
-
-        if (value == null) {
-            ps.setNull(index, Types.DECIMAL);
-        } else {
-            ps.setDouble(index, value);
-        }
-    }
-
-    private void setNullableString(
-            PreparedStatement ps,
-            int index,
-            String value
-    ) throws SQLException {
-
-        if (value == null || value.isBlank()) {
-            ps.setNull(index, Types.VARCHAR);
-        } else {
-            ps.setString(index, value);
-        }
-    }
-
-    private Double calculateAverageScore(
-            Grade grade
-    ) {
-        if (grade.getAverageScore() != null) {
-            return grade.getAverageScore();
-        }
-
-        Double attendance =
-                grade.getAttendanceScore();
-
-        Double midterm =
-                grade.getMidtermScore();
-
-        Double finalScore =
-                grade.getFinalScore();
-
-        if (attendance == null
-                || midterm == null
-                || finalScore == null) {
-
+        if (resultSet.wasNull()) {
             return null;
         }
 
-        double average =
-                attendance * 0.1
-                        + midterm * 0.3
-                        + finalScore * 0.6;
-
-        return Math.round(average * 100.0) / 100.0;
-    }
-
-    private String determineResult(
-            Double averageScore,
-            String currentResult
-    ) {
-        if (currentResult != null
-                && !currentResult.isBlank()) {
-
-            return currentResult.trim().toUpperCase();
-        }
-
-        if (averageScore == null) {
-            return null;
-        }
-
-        return averageScore >= 5
-                ? "PASSED"
-                : "FAILED";
-    }
-
-    private void validateGrade(Grade grade) {
-        if (grade == null) {
-            throw new IllegalArgumentException(
-                    "Thông tin điểm không được null."
-            );
-        }
-
-        if (grade.getEnrollmentId() <= 0) {
-            throw new IllegalArgumentException(
-                    "Enrollment ID không hợp lệ."
-            );
-        }
+        return value;
     }
 }
+
+
+
+
+

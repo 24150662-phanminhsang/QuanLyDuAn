@@ -13,6 +13,9 @@ import util.PasswordUtil;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.security.SecureRandom;
+import java.time.Duration;
+import java.time.LocalDateTime;
 
 public class EmailVerificationService {
 
@@ -20,9 +23,16 @@ public class EmailVerificationService {
             "EMAIL_VERIFICATION";
 
     private static final int MAX_ATTEMPTS = 5;
+    private static final int MAX_RESENDS = 5;
+    private static final int RESEND_COOLDOWN_SECONDS = 60;
+    private static final int OTP_EXPIRATION_MINUTES = 10;
+
+    private static final SecureRandom SECURE_RANDOM =
+            new SecureRandom();
 
     private final EmailVerificationDAO verificationDAO;
     private final UserDAO userDAO;
+    private final EmailService emailService;
 
     public EmailVerificationService() {
         this.verificationDAO =
@@ -30,6 +40,203 @@ public class EmailVerificationService {
 
         this.userDAO =
                 new UserDAO();
+
+        this.emailService =
+                new EmailService();
+    }
+
+    /**
+     * Gửi lại OTP xác minh email.
+     *
+     * - Khóa gửi lại trong 60 giây.
+     * - Tối đa 5 lần gửi lại.
+     * - OTP cũ bị vô hiệu hóa.
+     * - OTP mới có hiệu lực 10 phút.
+     */
+    public ResendResult resendVerificationOtp(
+            int userId
+    ) throws SQLException {
+
+        validateUserId(userId);
+
+        User user =
+                userDAO.findById(userId);
+
+        if (user == null) {
+            return ResendResult.failure(
+                    "Không tìm thấy tài khoản."
+            );
+        }
+
+        if (user.isEmailVerified()) {
+            return ResendResult.failure(
+                    "Email của tài khoản đã được xác minh."
+            );
+        }
+
+        if (user.getStatus()
+                != AccountStatus.PENDING_EMAIL) {
+            return ResendResult.failure(
+                    "Tài khoản không ở trạng thái chờ xác minh email."
+            );
+        }
+
+        if (user.getEmail() == null
+                || user.getEmail().isBlank()) {
+            return ResendResult.failure(
+                    "Tài khoản chưa có địa chỉ email."
+            );
+        }
+
+        EmailVerification latest =
+                verificationDAO.findLatestByUserId(
+                        userId,
+                        EMAIL_VERIFICATION
+                );
+
+        int nextResendCount = 1;
+
+        if (latest != null) {
+            nextResendCount =
+                    latest.getResendCount() + 1;
+
+            if (nextResendCount > MAX_RESENDS) {
+                return ResendResult.failure(
+                        "Bạn đã gửi lại OTP quá "
+                                + MAX_RESENDS
+                                + " lần. Vui lòng liên hệ quản trị viên."
+                );
+            }
+
+            if (latest.getCreatedAt() != null) {
+                long elapsedSeconds =
+                        Duration.between(
+                                latest.getCreatedAt(),
+                                LocalDateTime.now()
+                        ).getSeconds();
+
+                if (elapsedSeconds
+                        < RESEND_COOLDOWN_SECONDS) {
+                    int remainingSeconds =
+                            (int) (
+                                    RESEND_COOLDOWN_SECONDS
+                                            - elapsedSeconds
+                            );
+
+                    return ResendResult.cooldown(
+                            remainingSeconds,
+                            "Vui lòng chờ "
+                                    + remainingSeconds
+                                    + " giây trước khi gửi lại OTP."
+                    );
+                }
+            }
+        }
+
+        String rawOtp = generateOtp();
+
+        EmailVerification newVerification =
+                new EmailVerification();
+
+        newVerification.setUserId(userId);
+        newVerification.setOtpHash(
+                PasswordUtil.hashPassword(rawOtp)
+        );
+        newVerification.setPurpose(
+                EMAIL_VERIFICATION
+        );
+        newVerification.setExpiresAt(
+                LocalDateTime.now()
+                        .plusMinutes(
+                                OTP_EXPIRATION_MINUTES
+                        )
+        );
+        newVerification.setAttemptCount(0);
+        newVerification.setResendCount(
+                nextResendCount
+        );
+
+        long verificationId;
+
+        try (Connection connection =
+                     DBConnection.getConnection()) {
+
+            boolean originalAutoCommit =
+                    connection.getAutoCommit();
+
+            try {
+                connection.setAutoCommit(false);
+
+                verificationDAO.invalidateActiveCodes(
+                        connection,
+                        userId,
+                        EMAIL_VERIFICATION
+                );
+
+                verificationId =
+                        verificationDAO.insert(
+                                connection,
+                                newVerification
+                        );
+
+                connection.commit();
+
+            } catch (Exception exception) {
+                rollbackQuietly(connection);
+
+                if (exception
+                        instanceof SQLException sqlException) {
+                    throw sqlException;
+                }
+
+                throw new SQLException(
+                        "Không thể tạo OTP mới.",
+                        exception
+                );
+
+            } finally {
+                restoreAutoCommit(
+                        connection,
+                        originalAutoCommit
+                );
+            }
+        }
+
+        try {
+            emailService.sendVerificationOtp(
+                    user.getEmail(),
+                    user.getFullName(),
+                    rawOtp
+            );
+
+        } catch (Exception exception) {
+            verificationDAO.invalidateById(
+                    verificationId
+            );
+
+            return ResendResult.failure(
+                    "Không thể gửi OTP đến email. Chi tiết: "
+                            + rootMessage(exception)
+            );
+        }
+
+        return ResendResult.success(
+                RESEND_COOLDOWN_SECONDS,
+                "Mã OTP mới đã được gửi đến email "
+                        + maskEmail(user.getEmail())
+                        + ". Mã có hiệu lực trong "
+                        + OTP_EXPIRATION_MINUTES
+                        + " phút."
+        );
+    }
+
+    /**
+     * Tên rút gọn để tương thích với View/Controller.
+     */
+    public ResendResult resendOtp(
+            int userId
+    ) throws SQLException {
+        return resendVerificationOtp(userId);
     }
 
     /**
@@ -369,6 +576,45 @@ public class EmailVerificationService {
         }
     }
 
+    private String generateOtp() {
+        int value =
+                SECURE_RANDOM.nextInt(1_000_000);
+
+        return String.format("%06d", value);
+    }
+
+    private String maskEmail(String email) {
+        if (email == null || !email.contains("@")) {
+            return "email đã đăng ký";
+        }
+
+        String[] parts = email.trim().split("@", 2);
+        String local = parts[0];
+        String domain = parts[1];
+
+        String visible =
+                local.length() <= 2
+                        ? local.substring(0, 1)
+                        : local.substring(0, 2);
+
+        return visible + "***@" + domain;
+    }
+
+    private String rootMessage(Throwable throwable) {
+        Throwable current = throwable;
+
+        while (current != null
+                && current.getCause() != null) {
+            current = current.getCause();
+        }
+
+        return current == null
+                || current.getMessage() == null
+                || current.getMessage().isBlank()
+                ? "Không xác định"
+                : current.getMessage();
+    }
+
     private void rollbackQuietly(
             Connection connection
     ) {
@@ -405,6 +651,70 @@ public class EmailVerificationService {
                     "Không thể khôi phục AutoCommit: "
                             + exception.getMessage()
             );
+        }
+    }
+
+    /**
+     * Kết quả gửi lại OTP.
+     */
+    public static final class ResendResult {
+
+        private final boolean success;
+        private final int cooldownSeconds;
+        private final String message;
+
+        private ResendResult(
+                boolean success,
+                int cooldownSeconds,
+                String message
+        ) {
+            this.success = success;
+            this.cooldownSeconds = cooldownSeconds;
+            this.message = message;
+        }
+
+        public static ResendResult success(
+                int cooldownSeconds,
+                String message
+        ) {
+            return new ResendResult(
+                    true,
+                    cooldownSeconds,
+                    message
+            );
+        }
+
+        public static ResendResult failure(
+                String message
+        ) {
+            return new ResendResult(
+                    false,
+                    0,
+                    message
+            );
+        }
+
+        public static ResendResult cooldown(
+                int cooldownSeconds,
+                String message
+        ) {
+            return new ResendResult(
+                    false,
+                    cooldownSeconds,
+                    message
+            );
+        }
+
+        public boolean isSuccess() {
+            return success;
+        }
+
+        public int getCooldownSeconds() {
+            return cooldownSeconds;
+        }
+
+        public String getMessage() {
+            return message;
         }
     }
 

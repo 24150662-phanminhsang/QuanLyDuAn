@@ -13,6 +13,7 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class TeacherDAOImpl implements TeacherDAO {
 
@@ -35,33 +36,35 @@ public class TeacherDAOImpl implements TeacherDAO {
             FROM dbo.Teachers
             """;
 
-    /**
-     * Thêm giảng viên bằng Connection riêng.
-     */
-    @Override
-    public boolean insert(Teacher teacher) {
-        try (Connection connection =
-                     DBConnection.getConnection()) {
+    private static final int SQL_SERVER_FOREIGN_KEY_ERROR = 547;
+    private static final int SQL_SERVER_DUPLICATE_KEY_ERROR = 2627;
+    private static final int SQL_SERVER_DUPLICATE_INDEX_ERROR = 2601;
 
+    /* =====================================================
+       THÊM GIẢNG VIÊN
+       ===================================================== */
+
+    @Override
+    public boolean insert(
+            Teacher teacher
+    ) {
+        try (
+                Connection connection =
+                        DBConnection.getConnection()
+        ) {
             return insert(
                     connection,
                     teacher
             ) > 0;
 
         } catch (SQLException exception) {
-            throw new RuntimeException(
-                    "Không thể thêm giảng viên: "
-                            + exception.getMessage(),
+            throw translateException(
+                    "Không thể thêm giảng viên.",
                     exception
             );
         }
     }
 
-    /**
-     * Thêm giảng viên trong transaction hiện tại.
-     *
-     * Trả về teacher_id vừa tạo.
-     */
     @Override
     public int insert(
             Connection connection,
@@ -96,99 +99,31 @@ public class TeacherDAOImpl implements TeacherDAO {
                 )
                 """;
 
-        try (PreparedStatement statement =
-                     connection.prepareStatement(
-                             sql,
-                             Statement.RETURN_GENERATED_KEYS
-                     )) {
-
-            statement.setString(
-                    1,
-                    normalizeTeacherCode(
-                            teacher.getTeacherCode()
-                    )
-            );
-
-            if (teacher.getUserId() == null) {
-                statement.setNull(
-                        2,
-                        Types.INTEGER
-                );
-            } else {
-                statement.setInt(
-                        2,
-                        teacher.getUserId()
-                );
-            }
-
-            statement.setString(
-                    3,
-                    teacher.getFullName().trim()
-            );
-
-            if (teacher.getDateOfBirth() == null) {
-                statement.setNull(
-                        4,
-                        Types.DATE
-                );
-            } else {
-                statement.setDate(
-                        4,
-                        teacher.getDateOfBirth()
-                );
-            }
-
-            setNullableString(
+        try (
+                PreparedStatement statement =
+                        connection.prepareStatement(
+                                sql,
+                                Statement.RETURN_GENERATED_KEYS
+                        )
+        ) {
+            bindTeacherData(
                     statement,
-                    5,
-                    normalizeGender(
-                            teacher.getGender()
-                    )
-            );
-
-            setNullableString(
-                    statement,
-                    6,
-                    teacher.getEmail()
-            );
-
-            setNullableString(
-                    statement,
-                    7,
-                    teacher.getPhone()
-            );
-
-            setNullableString(
-                    statement,
-                    8,
-                    teacher.getAddress()
-            );
-
-            setNullableString(
-                    statement,
-                    9,
-                    teacher.getSpecialization()
-            );
-
-            statement.setString(
-                    10,
-                    normalizeStatus(
-                            teacher.getStatus()
-                    )
+                    teacher
             );
 
             int affectedRows =
                     statement.executeUpdate();
 
-            if (affectedRows == 0) {
+            if (affectedRows <= 0) {
                 throw new SQLException(
                         "Không thể tạo hồ sơ giảng viên."
                 );
             }
 
-            try (ResultSet generatedKeys =
-                         statement.getGeneratedKeys()) {
-
+            try (
+                    ResultSet generatedKeys =
+                            statement.getGeneratedKeys()
+            ) {
                 if (generatedKeys.next()) {
                     int teacherId =
                             generatedKeys.getInt(1);
@@ -207,31 +142,31 @@ public class TeacherDAOImpl implements TeacherDAO {
         );
     }
 
-    /**
-     * Cập nhật giảng viên bằng Connection riêng.
-     */
-    @Override
-    public boolean update(Teacher teacher) {
-        try (Connection connection =
-                     DBConnection.getConnection()) {
+    /* =====================================================
+       CẬP NHẬT GIẢNG VIÊN
+       ===================================================== */
 
+    @Override
+    public boolean update(
+            Teacher teacher
+    ) {
+        try (
+                Connection connection =
+                        DBConnection.getConnection()
+        ) {
             return update(
                     connection,
                     teacher
             );
 
         } catch (SQLException exception) {
-            throw new RuntimeException(
-                    "Không thể cập nhật giảng viên: "
-                            + exception.getMessage(),
+            throw translateException(
+                    "Không thể cập nhật giảng viên.",
                     exception
             );
         }
     }
 
-    /**
-     * Cập nhật giảng viên trong transaction hiện tại.
-     */
     @Override
     public boolean update(
             Connection connection,
@@ -259,82 +194,13 @@ public class TeacherDAOImpl implements TeacherDAO {
                 WHERE teacher_id = ?
                 """;
 
-        try (PreparedStatement statement =
-                     connection.prepareStatement(sql)) {
-
-            statement.setString(
-                    1,
-                    normalizeTeacherCode(
-                            teacher.getTeacherCode()
-                    )
-            );
-
-            if (teacher.getUserId() == null) {
-                statement.setNull(
-                        2,
-                        Types.INTEGER
-                );
-            } else {
-                statement.setInt(
-                        2,
-                        teacher.getUserId()
-                );
-            }
-
-            statement.setString(
-                    3,
-                    teacher.getFullName().trim()
-            );
-
-            if (teacher.getDateOfBirth() == null) {
-                statement.setNull(
-                        4,
-                        Types.DATE
-                );
-            } else {
-                statement.setDate(
-                        4,
-                        teacher.getDateOfBirth()
-                );
-            }
-
-            setNullableString(
+        try (
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            bindTeacherData(
                     statement,
-                    5,
-                    normalizeGender(
-                            teacher.getGender()
-                    )
-            );
-
-            setNullableString(
-                    statement,
-                    6,
-                    teacher.getEmail()
-            );
-
-            setNullableString(
-                    statement,
-                    7,
-                    teacher.getPhone()
-            );
-
-            setNullableString(
-                    statement,
-                    8,
-                    teacher.getAddress()
-            );
-
-            setNullableString(
-                    statement,
-                    9,
-                    teacher.getSpecialization()
-            );
-
-            statement.setString(
-                    10,
-                    normalizeStatus(
-                            teacher.getStatus()
-                    )
+                    teacher
             );
 
             statement.setInt(
@@ -346,14 +212,23 @@ public class TeacherDAOImpl implements TeacherDAO {
         }
     }
 
-    /**
-     * Xóa giảng viên.
-     */
+    /* =====================================================
+       XÓA GIẢNG VIÊN
+       ===================================================== */
+
     @Override
-    public boolean delete(int teacherId) {
-        if (teacherId <= 0) {
-            throw new IllegalArgumentException(
-                    "ID giảng viên không hợp lệ."
+    public boolean delete(
+            int teacherId
+    ) {
+        validatePositiveId(
+                teacherId,
+                "ID giảng viên"
+        );
+
+        if (hasAssignedClasses(teacherId)) {
+            throw new IllegalStateException(
+                    "Không thể xóa giảng viên vì đang có lớp được phân công. "
+                            + "Hãy chuyển giảng viên sang trạng thái INACTIVE."
             );
         }
 
@@ -363,11 +238,13 @@ public class TeacherDAOImpl implements TeacherDAO {
                 WHERE teacher_id = ?
                 """;
 
-        try (Connection connection =
-                     DBConnection.getConnection();
-             PreparedStatement statement =
-                     connection.prepareStatement(sql)) {
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
 
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
             statement.setInt(
                     1,
                     teacherId
@@ -376,19 +253,21 @@ public class TeacherDAOImpl implements TeacherDAO {
             return statement.executeUpdate() > 0;
 
         } catch (SQLException exception) {
-            throw new RuntimeException(
-                    "Không thể xóa giảng viên: "
-                            + exception.getMessage(),
+            throw translateException(
+                    "Không thể xóa giảng viên.",
                     exception
             );
         }
     }
 
-    /**
-     * Tìm giảng viên theo ID.
-     */
+    /* =====================================================
+       TÌM GIẢNG VIÊN
+       ===================================================== */
+
     @Override
-    public Teacher getById(int teacherId) {
+    public Teacher getById(
+            int teacherId
+    ) {
         if (teacherId <= 0) {
             return null;
         }
@@ -399,42 +278,17 @@ public class TeacherDAOImpl implements TeacherDAO {
                         WHERE teacher_id = ?
                         """;
 
-        try (Connection connection =
-                     DBConnection.getConnection();
-             PreparedStatement statement =
-                     connection.prepareStatement(sql)) {
-
-            statement.setInt(
-                    1,
-                    teacherId
-            );
-
-            try (ResultSet resultSet =
-                         statement.executeQuery()) {
-
-                if (resultSet.next()) {
-                    return mapTeacher(
-                            resultSet
-                    );
-                }
-            }
-
-        } catch (SQLException exception) {
-            throw new RuntimeException(
-                    "Không thể tìm giảng viên theo ID: "
-                            + exception.getMessage(),
-                    exception
-            );
-        }
-
-        return null;
+        return querySingleByInt(
+                sql,
+                teacherId,
+                "Không thể tìm giảng viên theo ID."
+        );
     }
 
-    /**
-     * Tìm giảng viên theo tài khoản.
-     */
     @Override
-    public Teacher getByUserId(int userId) {
+    public Teacher getByUserId(
+            int userId
+    ) {
         if (userId <= 0) {
             return null;
         }
@@ -445,45 +299,21 @@ public class TeacherDAOImpl implements TeacherDAO {
                         WHERE user_id = ?
                         """;
 
-        try (Connection connection =
-                     DBConnection.getConnection();
-             PreparedStatement statement =
-                     connection.prepareStatement(sql)) {
-
-            statement.setInt(
-                    1,
-                    userId
-            );
-
-            try (ResultSet resultSet =
-                         statement.executeQuery()) {
-
-                if (resultSet.next()) {
-                    return mapTeacher(
-                            resultSet
-                    );
-                }
-            }
-
-        } catch (SQLException exception) {
-            throw new RuntimeException(
-                    "Không thể tìm giảng viên theo tài khoản: "
-                            + exception.getMessage(),
-                    exception
-            );
-        }
-
-        return null;
+        return querySingleByInt(
+                sql,
+                userId,
+                "Không thể tìm giảng viên theo tài khoản."
+        );
     }
 
-    /**
-     * Tìm giảng viên theo mã.
-     */
     @Override
-    public Teacher getByCode(String teacherCode) {
-        if (teacherCode == null
-                || teacherCode.isBlank()) {
-
+    public Teacher getByCode(
+            String teacherCode
+    ) {
+        if (
+                teacherCode == null
+                        || teacherCode.isBlank()
+        ) {
             return null;
         }
 
@@ -493,128 +323,39 @@ public class TeacherDAOImpl implements TeacherDAO {
                         WHERE UPPER(teacher_code) = UPPER(?)
                         """;
 
-        try (Connection connection =
-                     DBConnection.getConnection();
-             PreparedStatement statement =
-                     connection.prepareStatement(sql)) {
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
 
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
             statement.setString(
                     1,
                     teacherCode.trim()
             );
 
-            try (ResultSet resultSet =
-                         statement.executeQuery()) {
-
-                if (resultSet.next()) {
-                    return mapTeacher(
-                            resultSet
-                    );
-                }
-            }
-
-        } catch (SQLException exception) {
-            throw new RuntimeException(
-                    "Không thể tìm giảng viên theo mã: "
-                            + exception.getMessage(),
-                    exception
-            );
-        }
-
-        return null;
-    }
-
-    /**
-     * Kiểm tra mã giảng viên đã tồn tại.
-     */
-    @Override
-    public boolean existsByTeacherCode(
-            String teacherCode
-    ) {
-        if (teacherCode == null
-                || teacherCode.isBlank()) {
-
-            return false;
-        }
-
-        String sql =
-                """
-                SELECT COUNT(*) AS total
-                FROM dbo.Teachers
-                WHERE UPPER(teacher_code) = UPPER(?)
-                """;
-
-        try (Connection connection =
-                     DBConnection.getConnection();
-             PreparedStatement statement =
-                     connection.prepareStatement(sql)) {
-
-            statement.setString(
-                    1,
-                    teacherCode.trim()
-            );
-
-            try (ResultSet resultSet =
-                         statement.executeQuery()) {
-
+            try (
+                    ResultSet resultSet =
+                            statement.executeQuery()
+            ) {
                 return resultSet.next()
-                        && resultSet.getInt("total") > 0;
+                        ? mapTeacher(resultSet)
+                        : null;
             }
 
         } catch (SQLException exception) {
-            throw new RuntimeException(
-                    "Không thể kiểm tra mã giảng viên: "
-                            + exception.getMessage(),
+            throw translateException(
+                    "Không thể tìm giảng viên theo mã.",
                     exception
             );
         }
     }
 
-    /**
-     * Kiểm tra user_id đã có hồ sơ giảng viên.
-     */
-    @Override
-    public boolean existsByUserId(int userId) {
-        if (userId <= 0) {
-            return false;
-        }
+    /* =====================================================
+       DANH SÁCH VÀ TÌM KIẾM
+       ===================================================== */
 
-        String sql =
-                """
-                SELECT COUNT(*) AS total
-                FROM dbo.Teachers
-                WHERE user_id = ?
-                """;
-
-        try (Connection connection =
-                     DBConnection.getConnection();
-             PreparedStatement statement =
-                     connection.prepareStatement(sql)) {
-
-            statement.setInt(
-                    1,
-                    userId
-            );
-
-            try (ResultSet resultSet =
-                         statement.executeQuery()) {
-
-                return resultSet.next()
-                        && resultSet.getInt("total") > 0;
-            }
-
-        } catch (SQLException exception) {
-            throw new RuntimeException(
-                    "Không thể kiểm tra tài khoản giảng viên: "
-                            + exception.getMessage(),
-                    exception
-            );
-        }
-    }
-
-    /**
-     * Lấy toàn bộ danh sách giảng viên.
-     */
     @Override
     public List<Teacher> getAll() {
         String sql =
@@ -623,38 +364,18 @@ public class TeacherDAOImpl implements TeacherDAO {
                         ORDER BY teacher_id DESC
                         """;
 
-        List<Teacher> teachers =
-                new ArrayList<>();
-
-        try (Connection connection =
-                     DBConnection.getConnection();
-             PreparedStatement statement =
-                     connection.prepareStatement(sql);
-             ResultSet resultSet =
-                     statement.executeQuery()) {
-
-            while (resultSet.next()) {
-                teachers.add(
-                        mapTeacher(resultSet)
-                );
-            }
-
-        } catch (SQLException exception) {
-            throw new RuntimeException(
-                    "Không thể tải danh sách giảng viên: "
-                            + exception.getMessage(),
-                    exception
-            );
-        }
-
-        return teachers;
+        return queryList(
+                sql,
+                null,
+                null,
+                "Không thể tải danh sách giảng viên."
+        );
     }
 
-    /**
-     * Tìm kiếm giảng viên.
-     */
     @Override
-    public List<Teacher> search(String keyword) {
+    public List<Teacher> search(
+            String keyword
+    ) {
         String sql =
                 BASE_SELECT
                         + """
@@ -664,6 +385,7 @@ public class TeacherDAOImpl implements TeacherDAO {
                             OR COALESCE(email, '') LIKE ?
                             OR COALESCE(phone, '') LIKE ?
                             OR COALESCE(specialization, '') LIKE ?
+                            OR status LIKE ?
                         ORDER BY teacher_id DESC
                         """;
 
@@ -678,20 +400,24 @@ public class TeacherDAOImpl implements TeacherDAO {
         List<Teacher> teachers =
                 new ArrayList<>();
 
-        try (Connection connection =
-                     DBConnection.getConnection();
-             PreparedStatement statement =
-                     connection.prepareStatement(sql)) {
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
 
-            statement.setString(1, searchValue);
-            statement.setString(2, searchValue);
-            statement.setString(3, searchValue);
-            statement.setString(4, searchValue);
-            statement.setString(5, searchValue);
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            for (int index = 1; index <= 6; index++) {
+                statement.setString(
+                        index,
+                        searchValue
+                );
+            }
 
-            try (ResultSet resultSet =
-                         statement.executeQuery()) {
-
+            try (
+                    ResultSet resultSet =
+                            statement.executeQuery()
+            ) {
                 while (resultSet.next()) {
                     teachers.add(
                             mapTeacher(resultSet)
@@ -699,25 +425,514 @@ public class TeacherDAOImpl implements TeacherDAO {
                 }
             }
 
+            return teachers;
+
         } catch (SQLException exception) {
-            throw new RuntimeException(
-                    "Không thể tìm kiếm giảng viên: "
-                            + exception.getMessage(),
+            throw translateException(
+                    "Không thể tìm kiếm giảng viên.",
                     exception
             );
         }
-
-        return teachers;
     }
 
-    /**
-     * Chuyển ResultSet thành Teacher.
-     */
+    @Override
+    public List<Teacher> getByStatus(
+            String status
+    ) {
+        String normalizedStatus =
+                normalizeStatus(status);
+
+        String sql =
+                BASE_SELECT
+                        + """
+                        WHERE UPPER(status) = ?
+                        ORDER BY teacher_id DESC
+                        """;
+
+        return queryList(
+                sql,
+                normalizedStatus,
+                null,
+                "Không thể tải giảng viên theo trạng thái."
+        );
+    }
+
+    /* =====================================================
+       KIỂM TRA TỒN TẠI
+       ===================================================== */
+
+    @Override
+    public boolean existsByTeacherCode(
+            String teacherCode
+    ) {
+        if (
+                teacherCode == null
+                        || teacherCode.isBlank()
+        ) {
+            return false;
+        }
+
+        String sql =
+                """
+                SELECT COUNT(*) AS total
+                FROM dbo.Teachers
+                WHERE UPPER(teacher_code) = UPPER(?)
+                """;
+
+        return queryCount(
+                sql,
+                teacherCode.trim(),
+                null,
+                "Không thể kiểm tra mã giảng viên."
+        ) > 0;
+    }
+
+    @Override
+    public boolean existsByTeacherCodeExceptId(
+            String teacherCode,
+            int excludedTeacherId
+    ) {
+        if (
+                teacherCode == null
+                        || teacherCode.isBlank()
+        ) {
+            return false;
+        }
+
+        String sql =
+                """
+                SELECT COUNT(*) AS total
+                FROM dbo.Teachers
+                WHERE UPPER(teacher_code) = UPPER(?)
+                  AND teacher_id <> ?
+                """;
+
+        return queryCount(
+                sql,
+                teacherCode.trim(),
+                excludedTeacherId,
+                "Không thể kiểm tra mã giảng viên."
+        ) > 0;
+    }
+
+    @Override
+    public boolean existsByUserId(
+            int userId
+    ) {
+        if (userId <= 0) {
+            return false;
+        }
+
+        String sql =
+                """
+                SELECT COUNT(*) AS total
+                FROM dbo.Teachers
+                WHERE user_id = ?
+                """;
+
+        return queryCountByInt(
+                sql,
+                userId,
+                "Không thể kiểm tra tài khoản giảng viên."
+        ) > 0;
+    }
+
+    /* =====================================================
+       TRẠNG THÁI GIẢNG VIÊN
+       ===================================================== */
+
+    @Override
+    public boolean updateStatus(
+            int teacherId,
+            String status
+    ) {
+        validatePositiveId(
+                teacherId,
+                "ID giảng viên"
+        );
+
+        String normalizedStatus =
+                normalizeStatus(status);
+
+        String sql =
+                """
+                UPDATE dbo.Teachers
+                SET
+                    status = ?,
+                    updated_at = SYSDATETIME()
+                WHERE teacher_id = ?
+                """;
+
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
+
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            statement.setString(
+                    1,
+                    normalizedStatus
+            );
+
+            statement.setInt(
+                    2,
+                    teacherId
+            );
+
+            return statement.executeUpdate() > 0;
+
+        } catch (SQLException exception) {
+            throw translateException(
+                    "Không thể cập nhật trạng thái giảng viên.",
+                    exception
+            );
+        }
+    }
+
+    @Override
+    public boolean activateTeacher(
+            int teacherId
+    ) {
+        return updateStatus(
+                teacherId,
+                "ACTIVE"
+        );
+    }
+
+    @Override
+    public boolean deactivateTeacher(
+            int teacherId
+    ) {
+        return updateStatus(
+                teacherId,
+                "INACTIVE"
+        );
+    }
+
+    /* =====================================================
+       KIỂM TRA LỚP PHỤ TRÁCH
+       ===================================================== */
+
+    @Override
+    public boolean hasAssignedClasses(
+            int teacherId
+    ) {
+        return countAssignedClasses(
+                teacherId
+        ) > 0;
+    }
+
+    @Override
+    public int countAssignedClasses(
+            int teacherId
+    ) {
+        validatePositiveId(
+                teacherId,
+                "ID giảng viên"
+        );
+
+        String sql =
+                """
+                SELECT COUNT(*) AS total
+                FROM dbo.CourseClasses
+                WHERE teacher_id = ?
+                """;
+
+        return queryCountByInt(
+                sql,
+                teacherId,
+                "Không thể đếm lớp của giảng viên."
+        );
+    }
+
+    @Override
+    public int countActiveClasses(
+            int teacherId
+    ) {
+        validatePositiveId(
+                teacherId,
+                "ID giảng viên"
+        );
+
+        String sql =
+                """
+                SELECT COUNT(*) AS total
+                FROM dbo.CourseClasses
+                WHERE teacher_id = ?
+                  AND status IN ('OPEN', 'CLOSED')
+                """;
+
+        return queryCountByInt(
+                sql,
+                teacherId,
+                "Không thể đếm lớp đang hoạt động."
+        );
+    }
+
+    /* =====================================================
+       HÀM DÙNG CHUNG
+       ===================================================== */
+
+    private Teacher querySingleByInt(
+            String sql,
+            int value,
+            String errorMessage
+    ) {
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
+
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            statement.setInt(
+                    1,
+                    value
+            );
+
+            try (
+                    ResultSet resultSet =
+                            statement.executeQuery()
+            ) {
+                return resultSet.next()
+                        ? mapTeacher(resultSet)
+                        : null;
+            }
+
+        } catch (SQLException exception) {
+            throw translateException(
+                    errorMessage,
+                    exception
+            );
+        }
+    }
+
+    private List<Teacher> queryList(
+            String sql,
+            String textParameter,
+            Integer intParameter,
+            String errorMessage
+    ) {
+        List<Teacher> teachers =
+                new ArrayList<>();
+
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
+
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            int parameterIndex = 1;
+
+            if (textParameter != null) {
+                statement.setString(
+                        parameterIndex++,
+                        textParameter
+                );
+            }
+
+            if (intParameter != null) {
+                statement.setInt(
+                        parameterIndex,
+                        intParameter
+                );
+            }
+
+            try (
+                    ResultSet resultSet =
+                            statement.executeQuery()
+            ) {
+                while (resultSet.next()) {
+                    teachers.add(
+                            mapTeacher(resultSet)
+                    );
+                }
+            }
+
+            return teachers;
+
+        } catch (SQLException exception) {
+            throw translateException(
+                    errorMessage,
+                    exception
+            );
+        }
+    }
+
+    private int queryCount(
+            String sql,
+            String textParameter,
+            Integer intParameter,
+            String errorMessage
+    ) {
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
+
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            statement.setString(
+                    1,
+                    textParameter
+            );
+
+            if (intParameter != null) {
+                statement.setInt(
+                        2,
+                        intParameter
+                );
+            }
+
+            try (
+                    ResultSet resultSet =
+                            statement.executeQuery()
+            ) {
+                return resultSet.next()
+                        ? resultSet.getInt("total")
+                        : 0;
+            }
+
+        } catch (SQLException exception) {
+            throw translateException(
+                    errorMessage,
+                    exception
+            );
+        }
+    }
+
+    private int queryCountByInt(
+            String sql,
+            int intParameter,
+            String errorMessage
+    ) {
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
+
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            statement.setInt(
+                    1,
+                    intParameter
+            );
+
+            try (
+                    ResultSet resultSet =
+                            statement.executeQuery()
+            ) {
+                return resultSet.next()
+                        ? resultSet.getInt("total")
+                        : 0;
+            }
+
+        } catch (SQLException exception) {
+            throw translateException(
+                    errorMessage,
+                    exception
+            );
+        }
+    }
+
+    private void bindTeacherData(
+            PreparedStatement statement,
+            Teacher teacher
+    ) throws SQLException {
+
+        statement.setString(
+                1,
+                normalizeTeacherCode(
+                        teacher.getTeacherCode()
+                )
+        );
+
+        Integer userId =
+                teacher.getUserId();
+
+        if (
+                userId == null
+                        || userId <= 0
+        ) {
+            statement.setNull(
+                    2,
+                    Types.INTEGER
+            );
+        } else {
+            statement.setInt(
+                    2,
+                    userId
+            );
+        }
+
+        statement.setString(
+                3,
+                normalizeRequiredText(
+                        teacher.getFullName(),
+                        "Họ tên giảng viên"
+                )
+        );
+
+        if (teacher.getDateOfBirth() == null) {
+            statement.setNull(
+                    4,
+                    Types.DATE
+            );
+        } else {
+            statement.setDate(
+                    4,
+                    teacher.getDateOfBirth()
+            );
+        }
+
+        setNullableString(
+                statement,
+                5,
+                normalizeGender(
+                        teacher.getGender()
+                )
+        );
+
+        setNullableString(
+                statement,
+                6,
+                teacher.getEmail()
+        );
+
+        setNullableString(
+                statement,
+                7,
+                teacher.getPhone()
+        );
+
+        setNullableString(
+                statement,
+                8,
+                teacher.getAddress()
+        );
+
+        setNullableString(
+                statement,
+                9,
+                teacher.getSpecialization()
+        );
+
+        statement.setString(
+                10,
+                normalizeStatus(
+                        teacher.getStatus()
+                )
+        );
+    }
+
     private Teacher mapTeacher(
             ResultSet resultSet
     ) throws SQLException {
 
-        Teacher teacher = new Teacher();
+        Teacher teacher =
+                new Teacher();
 
         teacher.setTeacherId(
                 resultSet.getInt(
@@ -736,11 +951,11 @@ public class TeacherDAOImpl implements TeacherDAO {
                         "user_id"
                 );
 
-        if (resultSet.wasNull()) {
-            teacher.setUserId(null);
-        } else {
-            teacher.setUserId(userId);
-        }
+        teacher.setUserId(
+                resultSet.wasNull()
+                        ? null
+                        : userId
+        );
 
         teacher.setFullName(
                 resultSet.getString(
@@ -795,25 +1010,25 @@ public class TeacherDAOImpl implements TeacherDAO {
                         "created_at"
                 );
 
-        if (createdAt != null) {
-            teacher.setCreatedAt(
-                    createdAt
-            );
-        }
+        teacher.setCreatedAt(
+                createdAt
+        );
 
         Timestamp updatedAt =
                 resultSet.getTimestamp(
                         "updated_at"
                 );
 
-        if (updatedAt != null) {
-            teacher.setUpdatedAt(
-                    updatedAt
-            );
-        }
+        teacher.setUpdatedAt(
+                updatedAt
+        );
 
         return teacher;
     }
+
+    /* =====================================================
+       VALIDATION VÀ CHUẨN HÓA
+       ===================================================== */
 
     private void validateTeacherForInsert(
             Teacher teacher
@@ -824,39 +1039,36 @@ public class TeacherDAOImpl implements TeacherDAO {
             );
         }
 
-        if (teacher.getTeacherCode() == null
-                || teacher.getTeacherCode().isBlank()) {
+        normalizeTeacherCode(
+                teacher.getTeacherCode()
+        );
 
-            throw new IllegalArgumentException(
-                    "Mã giảng viên không được để trống."
-            );
-        }
-
-        if (teacher.getFullName() == null
-                || teacher.getFullName().isBlank()) {
-
-            throw new IllegalArgumentException(
-                    "Họ tên giảng viên không được để trống."
-            );
-        }
-
-        if (teacher.getUserId() == null
-                || teacher.getUserId() <= 0) {
-
-            throw new IllegalArgumentException(
-                    "Giảng viên phải được liên kết với tài khoản Users."
-            );
-        }
+        normalizeRequiredText(
+                teacher.getFullName(),
+                "Họ tên giảng viên"
+        );
     }
 
     private void validateTeacherForUpdate(
             Teacher teacher
     ) {
-        validateTeacherForInsert(teacher);
+        validateTeacherForInsert(
+                teacher
+        );
 
-        if (teacher.getTeacherId() <= 0) {
+        validatePositiveId(
+                teacher.getTeacherId(),
+                "ID giảng viên"
+        );
+    }
+
+    private void validatePositiveId(
+            int id,
+            String fieldName
+    ) {
+        if (id <= 0) {
             throw new IllegalArgumentException(
-                    "ID giảng viên không hợp lệ."
+                    fieldName + " phải lớn hơn 0."
             );
         }
     }
@@ -864,9 +1076,10 @@ public class TeacherDAOImpl implements TeacherDAO {
     private String normalizeTeacherCode(
             String teacherCode
     ) {
-        if (teacherCode == null
-                || teacherCode.isBlank()) {
-
+        if (
+                teacherCode == null
+                        || teacherCode.isBlank()
+        ) {
             throw new IllegalArgumentException(
                     "Mã giảng viên không được để trống."
             );
@@ -874,48 +1087,81 @@ public class TeacherDAOImpl implements TeacherDAO {
 
         return teacherCode
                 .trim()
-                .toUpperCase();
+                .toUpperCase(
+                        Locale.ROOT
+                );
+    }
+
+    private String normalizeRequiredText(
+            String value,
+            String fieldName
+    ) {
+        if (
+                value == null
+                        || value.isBlank()
+        ) {
+            throw new IllegalArgumentException(
+                    fieldName + " không được để trống."
+            );
+        }
+
+        return value.trim();
     }
 
     private String normalizeGender(
             String gender
     ) {
-        if (gender == null
-                || gender.isBlank()) {
-
+        if (
+                gender == null
+                        || gender.isBlank()
+        ) {
             return null;
         }
 
         String normalized =
-                gender.trim().toUpperCase();
+                gender.trim()
+                        .toUpperCase(
+                                Locale.ROOT
+                        );
 
         return switch (normalized) {
-            case "MALE", "NAM" -> "MALE";
-            case "FEMALE", "NỮ", "NU" -> "FEMALE";
-            case "OTHER", "KHÁC", "KHAC" -> "OTHER";
+            case "MALE", "NAM" ->
+                    "MALE";
 
-            default -> throw new IllegalArgumentException(
-                    "Giới tính không hợp lệ: "
-                            + gender
-            );
+            case "FEMALE", "NỮ", "NU" ->
+                    "FEMALE";
+
+            case "OTHER", "KHÁC", "KHAC" ->
+                    "OTHER";
+
+            default ->
+                    throw new IllegalArgumentException(
+                            "Giới tính không hợp lệ: "
+                                    + gender
+                    );
         };
     }
 
     private String normalizeStatus(
             String status
     ) {
-        if (status == null
-                || status.isBlank()) {
-
+        if (
+                status == null
+                        || status.isBlank()
+        ) {
             return "ACTIVE";
         }
 
         String normalized =
-                status.trim().toUpperCase();
+                status.trim()
+                        .toUpperCase(
+                                Locale.ROOT
+                        );
 
-        if (!normalized.equals("ACTIVE")
-                && !normalized.equals("INACTIVE")) {
-
+        if (
+                !"ACTIVE".equals(normalized)
+                        && !"INACTIVE".equals(normalized)
+        ) {
             throw new IllegalArgumentException(
                     "Trạng thái giảng viên không hợp lệ: "
                             + status
@@ -931,14 +1177,14 @@ public class TeacherDAOImpl implements TeacherDAO {
             String value
     ) throws SQLException {
 
-        if (value == null
-                || value.isBlank()) {
-
+        if (
+                value == null
+                        || value.isBlank()
+        ) {
             statement.setNull(
                     parameterIndex,
                     Types.NVARCHAR
             );
-
         } else {
             statement.setString(
                     parameterIndex,
@@ -951,12 +1197,51 @@ public class TeacherDAOImpl implements TeacherDAO {
             Connection connection
     ) throws SQLException {
 
-        if (connection == null
-                || connection.isClosed()) {
-
+        if (
+                connection == null
+                        || connection.isClosed()
+        ) {
             throw new SQLException(
                     "Connection không hợp lệ hoặc đã đóng."
             );
         }
+    }
+
+    private RuntimeException translateException(
+            String defaultMessage,
+            SQLException exception
+    ) {
+        int errorCode =
+                exception.getErrorCode();
+
+        if (
+                errorCode
+                        == SQL_SERVER_DUPLICATE_KEY_ERROR
+                        || errorCode
+                        == SQL_SERVER_DUPLICATE_INDEX_ERROR
+        ) {
+            return new IllegalArgumentException(
+                    "Mã giảng viên hoặc tài khoản liên kết đã tồn tại.",
+                    exception
+            );
+        }
+
+        if (
+                errorCode
+                        == SQL_SERVER_FOREIGN_KEY_ERROR
+        ) {
+            return new IllegalStateException(
+                    "Dữ liệu giảng viên đang được sử dụng "
+                            + "bởi lớp học hoặc dữ liệu liên quan.",
+                    exception
+            );
+        }
+
+        return new RuntimeException(
+                defaultMessage
+                        + "\nChi tiết: "
+                        + exception.getMessage(),
+                exception
+        );
     }
 }

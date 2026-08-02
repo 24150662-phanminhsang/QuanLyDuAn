@@ -13,70 +13,160 @@ public class CourseController {
         this.courseService = new CourseService();
     }
 
-    /**
-     * Thêm khóa học
-     */
+    /* =====================================================
+       THÊM KHÓA HỌC
+       ===================================================== */
+
     public boolean addCourse(Course course) {
         return courseService.addCourse(course);
     }
 
-    /**
-     * Lấy toàn bộ khóa học
-     */
+    /* =====================================================
+       DANH SÁCH KHÓA HỌC
+       ===================================================== */
+
     public List<Course> getAllCourses() {
         return courseService.getAllCourses();
     }
 
-    /**
-     * Lấy khóa học theo ID
-     */
-    public Course getCourseById(int id) {
-        return courseService.getCourseById(id);
-    }
-
-    /*
-     * Giữ lại để tương thích với các file cũ.
-     */
-    public Course getCourseByID(int id) {
-        return getCourseById(id);
-    }
-
-    /**
-     * Cập nhật khóa học
-     */
-    public boolean updateCourse(Course course) {
-        return courseService.updateCourse(course);
-    }
-
-    /**
-     * Xóa khóa học
-     */
-    public boolean deleteCourse(int id) {
-        return courseService.deleteCourse(id);
-    }
-
-    /**
-     * Danh sách khóa học đang mở
-     */
     public List<Course> getActiveCourses() {
         return courseService.getActiveCourses();
     }
 
-    /**
-     * Danh sách khóa học nổi bật
-     */
+    public List<Course> getInactiveCourses() {
+        return courseService.getInactiveCourses();
+    }
+
+    public List<Course> getArchivedCourses() {
+        return courseService.getArchivedCourses();
+    }
+
+    public List<Course> getCoursesByStatus(
+            String status
+    ) {
+        return courseService.getCoursesByStatus(
+                status
+        );
+    }
+
     public List<Course> getFeaturedCourses() {
         return courseService.getFeaturedCourses();
     }
 
-    /**
-     * Tìm kiếm khóa học
-     */
-    public List<Course> searchCourses(String keyword) {
-        if (keyword == null || keyword.isBlank()) {
-            return getAllCourses();
-        }
+    /* =====================================================
+       TÌM KIẾM
+       ===================================================== */
 
-        return courseService.searchCourses(keyword.trim());
+    public Course getCourseById(
+            int courseId
+    ) {
+        return courseService.getCourseById(
+                courseId
+        );
+    }
+
+    /*
+     * Giữ tương thích code cũ.
+     */
+    public Course getCourseByID(
+            int courseId
+    ) {
+        return getCourseById(
+                courseId
+        );
+    }
+
+    public Course getCourseByCode(
+            String code
+    ) {
+        return courseService.getCourseByCode(
+                code
+        );
+    }
+
+    public List<Course> searchCourses(
+            String keyword
+    ) {
+        return courseService.searchCourses(
+                keyword
+        );
+    }
+
+    /* =====================================================
+       CẬP NHẬT
+       ===================================================== */
+
+    public boolean updateCourse(
+            Course course
+    ) {
+        return courseService.updateCourse(
+                course
+        );
+    }
+
+    /* =====================================================
+       TRẠNG THÁI
+       ===================================================== */
+
+    public boolean activateCourse(
+            int courseId
+    ) {
+        return courseService.activateCourse(
+                courseId
+        );
+    }
+
+    public boolean deactivateCourse(
+            int courseId
+    ) {
+        return courseService.deactivateCourse(
+                courseId
+        );
+    }
+
+    public boolean archiveCourse(
+            int courseId
+    ) {
+        return courseService.archiveCourse(
+                courseId
+        );
+    }
+
+    public boolean updateCourseStatus(
+            int courseId,
+            String status
+    ) {
+        return courseService.updateCourseStatus(
+                courseId,
+                status
+        );
+    }
+
+    /* =====================================================
+       XÓA
+       ===================================================== */
+
+    public boolean canDeleteCourse(
+            int courseId
+    ) {
+        return courseService.canDeleteCourse(
+                courseId
+        );
+    }
+
+    public boolean deleteCourse(
+            int courseId
+    ) {
+        return courseService.deleteCourse(
+                courseId
+        );
+    }
+
+    public int countClasses(
+            int courseId
+    ) {
+        return courseService.countClasses(
+                courseId
+        );
     }
 }

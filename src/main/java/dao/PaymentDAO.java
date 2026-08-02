@@ -17,6 +17,10 @@ public interface PaymentDAO {
             double paidAmount,
             String status
     );
+    boolean deleteUnpaidEnrollment(
+            int studentId,
+            int enrollmentId
+    );
 
     Payment getById(int paymentId);
 
@@ -25,4 +29,7 @@ public interface PaymentDAO {
     List<Payment> getAll();
 
     List<Payment> getByStudentId(int studentId);
+
+    List<Payment> getLatestByStudentId(int studentId);
+
 }

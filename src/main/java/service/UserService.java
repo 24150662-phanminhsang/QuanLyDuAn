@@ -1,49 +1,162 @@
 package service;
 
+import dao.StudentDAO;
+import dao.TeacherDAO;
 import dao.UserDAO;
+import dao.impl.TeacherDAOImpl;
 import model.AccountStatus;
 import model.Role;
+import model.Student;
+import model.Teacher;
 import model.User;
+import util.DBConnection;
 import util.PasswordUtil;
 
+import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 public class UserService {
 
     private final UserDAO userDAO;
+    private final StudentDAO studentDAO;
+    private final TeacherDAO teacherDAO;
 
     public UserService() {
-        this.userDAO = new UserDAO();
+        this(
+                new UserDAO(),
+                new StudentDAO(),
+                new TeacherDAOImpl()
+        );
     }
 
-    /**
-     * Lấy toàn bộ danh sách người dùng.
-     */
+    public UserService(
+            UserDAO userDAO,
+            StudentDAO studentDAO,
+            TeacherDAO teacherDAO
+    ) {
+        if (userDAO == null) {
+            throw new IllegalArgumentException(
+                    "UserDAO không được null."
+            );
+        }
+
+        if (studentDAO == null) {
+            throw new IllegalArgumentException(
+                    "StudentDAO không được null."
+            );
+        }
+
+        if (teacherDAO == null) {
+            throw new IllegalArgumentException(
+                    "TeacherDAO không được null."
+            );
+        }
+
+        this.userDAO = userDAO;
+        this.studentDAO = studentDAO;
+        this.teacherDAO = teacherDAO;
+    }
+
+    /* =====================================================
+       DANH SÁCH VÀ TÌM KIẾM
+       ===================================================== */
+
     public List<User> getAllUsers()
             throws SQLException {
 
-        return userDAO.findAll();
+        List<User> users =
+                userDAO.findAll();
+
+        return users == null
+                ? Collections.emptyList()
+                : users;
     }
 
-    /**
-     * Tìm người dùng theo ID.
-     */
-    public Optional<User> getUserById(int id)
-            throws SQLException {
+    public Optional<User> getUserById(
+            int userId
+    ) throws SQLException {
 
-        if (id <= 0) {
+        if (userId <= 0) {
             return Optional.empty();
         }
 
         return Optional.ofNullable(
-                userDAO.findById(id)
+                userDAO.findById(userId)
         );
     }
 
+    public List<User> getUsers(
+            String keyword,
+            int page,
+            int pageSize
+    ) throws SQLException {
+
+        validatePagination(
+                page,
+                pageSize
+        );
+
+        List<User> users =
+                userDAO.search(
+                        keyword,
+                        page,
+                        pageSize
+                );
+
+        return users == null
+                ? Collections.emptyList()
+                : users;
+    }
+
+    public int countUsers(
+            String keyword
+    ) throws SQLException {
+
+        return userDAO.count(keyword);
+    }
+
+    public int getTotalPages(
+            String keyword,
+            int pageSize
+    ) throws SQLException {
+
+        if (pageSize <= 0) {
+            throw new IllegalArgumentException(
+                    "Số dòng trên trang phải lớn hơn 0."
+            );
+        }
+
+        return userDAO.getTotalPages(
+                keyword,
+                pageSize
+        );
+    }
+
+    public List<User> getPendingTeachers()
+            throws SQLException {
+
+        List<User> users =
+                userDAO.findPendingTeachers();
+
+        return users == null
+                ? Collections.emptyList()
+                : users;
+    }
+
+    /* =====================================================
+       TẠO TÀI KHOẢN THEO VAI TRÒ
+       ===================================================== */
+
     /**
-     * Tạo người dùng mới.
+     * Hàm cũ được giữ để tương thích.
+     *
+     * Chỉ nên dùng trực tiếp cho ADMIN.
+     * STUDENT và TEACHER cần gọi createRoleAccount(...)
+     * để tạo đồng thời Users + hồ sơ vai trò.
      */
     public boolean createUser(
             String username,
@@ -54,47 +167,203 @@ public class UserService {
             int roleId
     ) throws SQLException {
 
+        Role role =
+                convertRoleIdToRole(roleId);
+
+        if (role != Role.ADMIN) {
+            throw new IllegalArgumentException(
+                    "Student hoặc Teacher cần nhập đầy đủ "
+                            + "hồ sơ theo vai trò."
+            );
+        }
+
+        User user =
+                buildAdminCreatedUser(
+                        username,
+                        password,
+                        fullName,
+                        email,
+                        phone,
+                        role
+                );
+
+        validateUniqueUserData(user);
+
+        return userDAO.insert(user);
+    }
+
+    /**
+     * Tạo tài khoản từ trang Admin.
+     *
+     * ADMIN:
+     * - Chỉ tạo Users.
+     *
+     * STUDENT:
+     * - Tạo Users + Students trong cùng transaction.
+     *
+     * TEACHER:
+     * - Tạo Users + Teachers trong cùng transaction.
+     */
+    public boolean createRoleAccount(
+            String username,
+            String rawPassword,
+            String fullName,
+            String email,
+            String phone,
+            Role role,
+            Student studentProfile,
+            Teacher teacherProfile
+    ) throws SQLException {
+
+        if (role == null) {
+            throw new IllegalArgumentException(
+                    "Vai trò không được để trống."
+            );
+        }
+
+        User user =
+                buildAdminCreatedUser(
+                        username,
+                        rawPassword,
+                        fullName,
+                        email,
+                        phone,
+                        role
+                );
+
+        validateUniqueUserData(user);
+        validateRoleProfile(
+                role,
+                studentProfile,
+                teacherProfile
+        );
+
+        if (role == Role.STUDENT) {
+            validateUniqueStudentProfile(
+                    studentProfile
+            );
+        }
+
+        if (role == Role.TEACHER) {
+            validateUniqueTeacherProfile(
+                    teacherProfile
+            );
+        }
+
+        try (
+                Connection connection =
+                        DBConnection.getConnection()
+        ) {
+            boolean originalAutoCommit =
+                    connection.getAutoCommit();
+
+            try {
+                connection.setAutoCommit(false);
+
+                int userId =
+                        userDAO.insert(
+                                connection,
+                                user
+                        );
+
+                if (userId <= 0) {
+                    throw new SQLException(
+                            "Không tạo được tài khoản Users."
+                    );
+                }
+
+                switch (role) {
+                    case ADMIN -> {
+                        // ADMIN chỉ lưu trong Users.
+                    }
+
+                    case STUDENT -> {
+                        prepareStudentProfile(
+                                studentProfile,
+                                user
+                        );
+
+                        int studentId =
+                                studentDAO.insert(
+                                        connection,
+                                        studentProfile
+                                );
+
+                        if (studentId <= 0) {
+                            throw new SQLException(
+                                    "Không tạo được hồ sơ sinh viên."
+                            );
+                        }
+                    }
+
+                    case TEACHER -> {
+                        prepareTeacherProfile(
+                                teacherProfile,
+                                user
+                        );
+
+                        int teacherId =
+                                teacherDAO.insert(
+                                        connection,
+                                        teacherProfile
+                                );
+
+                        if (teacherId <= 0) {
+                            throw new SQLException(
+                                    "Không tạo được hồ sơ giảng viên."
+                            );
+                        }
+                    }
+                }
+
+                connection.commit();
+                return true;
+
+            } catch (
+                    SQLException
+                    | RuntimeException exception
+            ) {
+                rollback(
+                        connection,
+                        exception
+                );
+
+                throw exception;
+
+            } finally {
+                restoreAutoCommit(
+                        connection,
+                        originalAutoCommit
+                );
+            }
+        }
+    }
+
+    private User buildAdminCreatedUser(
+            String username,
+            String rawPassword,
+            String fullName,
+            String email,
+            String phone,
+            Role role
+    ) {
         validateRequired(
                 username,
-                password,
+                rawPassword,
                 fullName
         );
 
-        if (roleId <= 0) {
-            throw new IllegalArgumentException(
-                    "Vai trò không hợp lệ."
-            );
-        }
-
-        User existingUser =
-                userDAO.findByUsername(
-                        username.trim()
-                );
-
-        if (existingUser != null) {
-            throw new IllegalArgumentException(
-                    "Tên đăng nhập đã tồn tại."
-            );
-        }
-
-        if (
-                email != null
-                        && !email.isBlank()
-                        && userDAO.existsByEmail(email.trim())
-        ) {
-            throw new IllegalArgumentException(
-                    "Email đã được sử dụng."
-            );
-        }
-
-        User user = new User();
+        User user =
+                new User();
 
         user.setUsername(
                 username.trim()
         );
 
         user.setPasswordHash(
-                PasswordUtil.hashPassword(password)
+                PasswordUtil.hashPassword(
+                        rawPassword
+                )
         );
 
         user.setFullName(
@@ -109,41 +378,103 @@ public class UserService {
                 normalize(phone)
         );
 
-        Role role = convertRoleIdToRole(roleId);
-
-        user.setRoleId(roleId);
         user.setRole(role);
+        user.setRoleId(
+                convertRoleToRoleId(role)
+        );
 
+        /*
+         * Tài khoản do Admin tạo được hoạt động ngay.
+         */
         user.setStatus(
                 AccountStatus.ACTIVE
         );
 
-        return userDAO.insert(user);
+        user.setRegistrationSource(
+                "ADMIN"
+        );
+
+        /*
+         * Tài khoản do Admin trực tiếp tạo được xem là
+         * đã xác minh thông tin email.
+         */
+        user.setEmailVerified(
+                true
+        );
+
+        user.setEmailVerifiedAt(
+                LocalDateTime.now()
+        );
+
+        user.setLoginAttempts(0);
+
+        return user;
     }
 
-    /**
-     * Cập nhật thông tin người dùng.
-     */
-    public boolean updateUser(User user)
-            throws SQLException {
+    private void prepareStudentProfile(
+            Student student,
+            User user
+    ) {
+        student.setUserId(
+                user.getUserId()
+        );
 
-        if (
-                user == null
-                        || user.getUserId() <= 0
-        ) {
-            throw new IllegalArgumentException(
-                    "Người dùng không hợp lệ."
-            );
-        }
+        student.setFullName(
+                user.getFullName()
+        );
 
-        if (
-                user.getFullName() == null
-                        || user.getFullName().isBlank()
-        ) {
-            throw new IllegalArgumentException(
-                    "Họ tên không được để trống."
-            );
-        }
+        student.setEmail(
+                user.getEmail()
+        );
+
+        student.setPhone(
+                user.getPhone()
+        );
+
+        student.setStatus(
+                "ACTIVE"
+        );
+    }
+
+    private void prepareTeacherProfile(
+            Teacher teacher,
+            User user
+    ) {
+        teacher.setUserId(
+                user.getUserId()
+        );
+
+        teacher.setFullName(
+                user.getFullName()
+        );
+
+        teacher.setEmail(
+                user.getEmail()
+        );
+
+        teacher.setPhone(
+                user.getPhone()
+        );
+
+        /*
+         * Teacher do Admin tạo được ACTIVE ngay.
+         * Teacher tự đăng ký vẫn do luồng đăng ký cũ xử lý
+         * với PENDING_APPROVAL ở bảng Users.
+         */
+        teacher.setStatus(
+                "ACTIVE"
+        );
+    }
+
+    /* =====================================================
+       CẬP NHẬT TÀI KHOẢN
+       ===================================================== */
+
+    public boolean updateUser(
+            User user
+    ) throws SQLException {
+
+        validateUserForUpdate(user);
 
         if (
                 user.getEmail() != null
@@ -170,6 +501,18 @@ public class UserService {
                 normalize(user.getPhone())
         );
 
+        if (user.getRole() == null) {
+            throw new IllegalArgumentException(
+                    "Vai trò không được để trống."
+            );
+        }
+
+        user.setRoleId(
+                convertRoleToRoleId(
+                        user.getRole()
+                )
+        );
+
         if (user.getStatus() == null) {
             user.setStatus(
                     AccountStatus.ACTIVE
@@ -179,57 +522,138 @@ public class UserService {
         return userDAO.update(user);
     }
 
-    /**
-     * Xóa người dùng.
-     */
-    public boolean deleteUser(int userId)
-            throws SQLException {
+    /* =====================================================
+       XÓA, KHÓA, MỞ KHÓA
+       ===================================================== */
 
-        if (userId <= 0) {
-            throw new IllegalArgumentException(
-                    "Mã người dùng không hợp lệ."
-            );
-        }
+    public boolean deleteUser(
+            int userId
+    ) throws SQLException {
+
+        validateUserId(userId);
 
         return userDAO.deleteById(userId);
     }
 
-    /**
-     * Khóa tài khoản.
-     */
-    public boolean lockUser(int userId)
-            throws SQLException {
+    public boolean lockUser(
+            int userId
+    ) throws SQLException {
 
         validateUserId(userId);
+
+        User user =
+                requireUser(userId);
+
+        protectMainAdmin(user);
 
         return userDAO.lockUser(userId);
     }
 
-    /**
-     * Mở khóa tài khoản.
-     */
-    public boolean unlockUser(int userId)
-            throws SQLException {
+    public boolean unlockUser(
+            int userId
+    ) throws SQLException {
 
         validateUserId(userId);
 
         return userDAO.unlockUser(userId);
     }
 
-    /**
-     * Ngừng hoạt động tài khoản.
-     */
-    public boolean deactivateUser(int userId)
-            throws SQLException {
+    public boolean deactivateUser(
+            int userId
+    ) throws SQLException {
 
         validateUserId(userId);
+
+        User user =
+                requireUser(userId);
+
+        protectMainAdmin(user);
 
         return userDAO.deactivateUser(userId);
     }
 
-    /**
-     * Reset mật khẩu.
-     */
+    /* =====================================================
+       DUYỆT / TỪ CHỐI TEACHER
+       ===================================================== */
+
+    public boolean approveTeacher(
+            int userId,
+            int adminId
+    ) throws SQLException {
+
+        validateUserId(userId);
+        validateUserId(adminId);
+
+        User teacherUser =
+                requireUser(userId);
+
+        if (teacherUser.getRole()
+                != Role.TEACHER) {
+
+            throw new IllegalArgumentException(
+                    "Tài khoản được chọn không phải giảng viên."
+            );
+        }
+
+        if (
+                teacherUser.getStatus()
+                        != AccountStatus.PENDING_APPROVAL
+        ) {
+            throw new IllegalStateException(
+                    "Tài khoản giảng viên không ở trạng thái chờ duyệt."
+            );
+        }
+
+        /*
+         * Việc gửi email sẽ được gọi ở Controller hoặc
+         * EmailService sau khi cập nhật thành công.
+         */
+        return userDAO.approveUser(
+                userId,
+                adminId
+        );
+    }
+
+    public boolean rejectTeacher(
+            int userId,
+            int adminId,
+            String reason
+    ) throws SQLException {
+
+        validateUserId(userId);
+        validateUserId(adminId);
+
+        User teacherUser =
+                requireUser(userId);
+
+        if (teacherUser.getRole()
+                != Role.TEACHER) {
+
+            throw new IllegalArgumentException(
+                    "Tài khoản được chọn không phải giảng viên."
+            );
+        }
+
+        if (
+                reason == null
+                        || reason.isBlank()
+        ) {
+            throw new IllegalArgumentException(
+                    "Vui lòng nhập lý do từ chối."
+            );
+        }
+
+        return userDAO.rejectUser(
+                userId,
+                adminId,
+                reason.trim()
+        );
+    }
+
+    /* =====================================================
+       RESET MẬT KHẨU
+       ===================================================== */
+
     public boolean resetPassword(
             int userId,
             String newPassword
@@ -246,60 +670,139 @@ public class UserService {
             );
         }
 
+        /*
+         * UserDAO.resetPassword tự băm mật khẩu.
+         */
         return userDAO.resetPassword(
                 userId,
                 newPassword
         );
     }
 
-    /**
-     * Lấy danh sách theo trang.
-     */
-    public List<User> getUsers(
-            String keyword,
-            int page,
-            int pageSize
+    /* =====================================================
+       VALIDATION
+       ===================================================== */
+
+    private void validateUniqueUserData(
+            User user
     ) throws SQLException {
 
-        validatePagination(
-                page,
-                pageSize
-        );
-
-        return userDAO.search(
-                keyword,
-                page,
-                pageSize
-        );
-    }
-
-    /**
-     * Đếm người dùng theo từ khóa.
-     */
-    public int countUsers(String keyword)
-            throws SQLException {
-
-        return userDAO.count(keyword);
-    }
-
-    /**
-     * Tính tổng số trang.
-     */
-    public int getTotalPages(
-            String keyword,
-            int pageSize
-    ) throws SQLException {
-
-        if (pageSize <= 0) {
+        if (
+                userDAO.existsByUsername(
+                        user.getUsername()
+                )
+        ) {
             throw new IllegalArgumentException(
-                    "Số dòng trên trang phải lớn hơn 0."
+                    "Tên đăng nhập đã tồn tại."
             );
         }
 
-        return userDAO.getTotalPages(
-                keyword,
-                pageSize
-        );
+        if (
+                user.getEmail() != null
+                        && userDAO.existsByEmail(
+                        user.getEmail()
+                )
+        ) {
+            throw new IllegalArgumentException(
+                    "Email đã được sử dụng."
+            );
+        }
+    }
+
+    private void validateRoleProfile(
+            Role role,
+            Student student,
+            Teacher teacher
+    ) {
+        switch (role) {
+            case ADMIN -> {
+                // Không cần hồ sơ phụ.
+            }
+
+            case STUDENT -> {
+                if (student == null) {
+                    throw new IllegalArgumentException(
+                            "Vui lòng nhập hồ sơ sinh viên."
+                    );
+                }
+
+                if (
+                        student.getStudentCode() == null
+                                || student.getStudentCode().isBlank()
+                ) {
+                    throw new IllegalArgumentException(
+                            "Mã sinh viên không được để trống."
+                    );
+                }
+            }
+
+            case TEACHER -> {
+                if (teacher == null) {
+                    throw new IllegalArgumentException(
+                            "Vui lòng nhập hồ sơ giảng viên."
+                    );
+                }
+
+                if (
+                        teacher.getTeacherCode() == null
+                                || teacher.getTeacherCode().isBlank()
+                ) {
+                    throw new IllegalArgumentException(
+                            "Mã giảng viên không được để trống."
+                    );
+                }
+            }
+        }
+    }
+
+    private void validateUniqueStudentProfile(
+            Student student
+    ) {
+        if (
+                studentDAO.existsByStudentCode(
+                        student.getStudentCode()
+                )
+        ) {
+            throw new IllegalArgumentException(
+                    "Mã sinh viên đã tồn tại."
+            );
+        }
+    }
+
+    private void validateUniqueTeacherProfile(
+            Teacher teacher
+    ) {
+        if (
+                teacherDAO.existsByTeacherCode(
+                        teacher.getTeacherCode()
+                )
+        ) {
+            throw new IllegalArgumentException(
+                    "Mã giảng viên đã tồn tại."
+            );
+        }
+    }
+
+    private void validateUserForUpdate(
+            User user
+    ) {
+        if (
+                user == null
+                        || user.getUserId() <= 0
+        ) {
+            throw new IllegalArgumentException(
+                    "Người dùng không hợp lệ."
+            );
+        }
+
+        if (
+                user.getFullName() == null
+                        || user.getFullName().isBlank()
+        ) {
+            throw new IllegalArgumentException(
+                    "Họ tên không được để trống."
+            );
+        }
     }
 
     private void validateRequired(
@@ -335,7 +838,41 @@ public class UserService {
         }
     }
 
-    private void validateUserId(int userId) {
+    private User requireUser(
+            int userId
+    ) throws SQLException {
+
+        User user =
+                userDAO.findById(userId);
+
+        if (user == null) {
+            throw new IllegalArgumentException(
+                    "Không tìm thấy tài khoản."
+            );
+        }
+
+        return user;
+    }
+
+    private void protectMainAdmin(
+            User user
+    ) {
+        if (
+                user != null
+                        && "admin".equalsIgnoreCase(
+                        user.getUsername()
+                )
+        ) {
+            throw new IllegalStateException(
+                    "Không thể khóa hoặc ngừng hoạt động "
+                            + "tài khoản quản trị chính."
+            );
+        }
+    }
+
+    private void validateUserId(
+            int userId
+    ) {
         if (userId <= 0) {
             throw new IllegalArgumentException(
                     "Mã người dùng không hợp lệ."
@@ -360,7 +897,13 @@ public class UserService {
         }
     }
 
-    private String normalize(String value) {
+    /* =====================================================
+       HÀM HỖ TRỢ
+       ===================================================== */
+
+    private String normalize(
+            String value
+    ) {
         if (
                 value == null
                         || value.isBlank()
@@ -371,23 +914,73 @@ public class UserService {
         return value.trim();
     }
 
-    /**
-     * Chuyển roleId thành Role.
-     *
-     * Phải đảm bảo ID trong bảng Roles đúng theo thứ tự này:
-     * 1 = ADMIN
-     * 2 = TEACHER
-     * 3 = STUDENT
-     */
-    private Role convertRoleIdToRole(int roleId) {
+    private int convertRoleToRoleId(
+            Role role
+    ) {
+        if (role == null) {
+            throw new IllegalArgumentException(
+                    "Vai trò không hợp lệ."
+            );
+        }
+
+        return switch (role) {
+            case ADMIN -> 1;
+            case TEACHER -> 2;
+            case STUDENT -> 3;
+        };
+    }
+
+    private Role convertRoleIdToRole(
+            int roleId
+    ) {
         return switch (roleId) {
             case 1 -> Role.ADMIN;
             case 2 -> Role.TEACHER;
             case 3 -> Role.STUDENT;
 
             default -> throw new IllegalArgumentException(
-                    "Vai trò không hợp lệ: " + roleId
+                    "Vai trò không hợp lệ: "
+                            + roleId
             );
         };
+    }
+
+    private void rollback(
+            Connection connection,
+            Exception originalException
+    ) {
+        if (connection == null) {
+            return;
+        }
+
+        try {
+            connection.rollback();
+
+        } catch (SQLException rollbackException) {
+            originalException.addSuppressed(
+                    rollbackException
+            );
+        }
+    }
+
+    private void restoreAutoCommit(
+            Connection connection,
+            boolean originalAutoCommit
+    ) {
+        if (connection == null) {
+            return;
+        }
+
+        try {
+            connection.setAutoCommit(
+                    originalAutoCommit
+            );
+
+        } catch (SQLException exception) {
+            System.err.println(
+                    "Không thể khôi phục AutoCommit: "
+                            + exception.getMessage()
+            );
+        }
     }
 }

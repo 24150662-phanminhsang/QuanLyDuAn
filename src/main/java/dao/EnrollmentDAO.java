@@ -130,6 +130,58 @@ public class EnrollmentDAO {
 
         return list;
     }
+    public List<Enrollment> getByClassId(
+            int classId
+    ) {
+        if (classId <= 0) {
+            throw new IllegalArgumentException(
+                    "ID lớp học phải lớn hơn 0."
+            );
+        }
+
+        List<Enrollment> list =
+                new ArrayList<>();
+
+        String sql =
+                BASE_SELECT
+                        + """
+                     WHERE class_id = ?
+                     ORDER BY enrollment_id DESC
+                     """;
+
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
+
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            statement.setInt(
+                    1,
+                    classId
+            );
+
+            try (
+                    ResultSet resultSet =
+                            statement.executeQuery()
+            ) {
+                while (resultSet.next()) {
+                    list.add(
+                            map(resultSet)
+                    );
+                }
+            }
+
+        } catch (SQLException exception) {
+            throw new RuntimeException(
+                    "Không thể tải danh sách đăng ký theo lớp: "
+                            + exception.getMessage(),
+                    exception
+            );
+        }
+
+        return list;
+    }
 
     public boolean updateEnrollment(Enrollment enrollment) {
 

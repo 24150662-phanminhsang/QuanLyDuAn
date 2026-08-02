@@ -822,3 +822,272 @@ SELECT * FROM dbo.Enrollments;
 SELECT * FROM dbo.Payments;
 SELECT * FROM dbo.Grades;
 GO
+
+
+USE CourseManagement;
+GO
+
+/* =========================================================
+   TẠO 3 KHÓA HỌC MỚI
+   ========================================================= */
+
+/* 1. LẬP TRÌNH WEB */
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM dbo.Courses
+    WHERE course_code = 'WEB01'
+)
+BEGIN
+    INSERT INTO dbo.Courses
+    (
+        course_code,
+        course_name,
+        description,
+        credits,
+        tuition_fee,
+        status
+    )
+    VALUES
+    (
+        'WEB01',
+        N'Lập trình Web',
+        N'HTML, CSS, JavaScript và xây dựng giao diện Web cơ bản',
+        3,
+        2700000,
+        'ACTIVE'
+    );
+END;
+GO
+
+/* 2. SPRING BOOT */
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM dbo.Courses
+    WHERE course_code = 'SPRING01'
+)
+BEGIN
+    INSERT INTO dbo.Courses
+    (
+        course_code,
+        course_name,
+        description,
+        credits,
+        tuition_fee,
+        status
+    )
+    VALUES
+    (
+        'SPRING01',
+        N'Phát triển ứng dụng Spring Boot',
+        N'Xây dựng RESTful API với Spring Boot, JPA và SQL Server',
+        4,
+        3500000,
+        'ACTIVE'
+    );
+END;
+GO
+
+/* 3. PHÂN TÍCH THIẾT KẾ HỆ THỐNG */
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM dbo.Courses
+    WHERE course_code = 'SA01'
+)
+BEGIN
+    INSERT INTO dbo.Courses
+    (
+        course_code,
+        course_name,
+        description,
+        credits,
+        tuition_fee,
+        status
+    )
+    VALUES
+    (
+        'SA01',
+        N'Phân tích và thiết kế hệ thống',
+        N'Khảo sát yêu cầu, UML, Use Case và thiết kế hệ thống phần mềm',
+        3,
+        2600000,
+        'ACTIVE'
+    );
+END;
+GO
+
+/* =========================================================
+   TẠO LỚP CHO 3 KHÓA HỌC
+   Không đăng ký sẵn SV001 để sinh viên có thể tự đăng ký.
+   ========================================================= */
+
+/* LỚP LẬP TRÌNH WEB */
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM dbo.CourseClasses
+    WHERE class_code = 'WEB01-01'
+)
+BEGIN
+    INSERT INTO dbo.CourseClasses
+    (
+        class_code,
+        course_id,
+        teacher_id,
+        semester,
+        school_year,
+        room,
+        schedule_text,
+        maximum_students,
+        start_date,
+        end_date,
+        status
+    )
+    SELECT
+        'WEB01-01',
+        c.course_id,
+        t.teacher_id,
+        'HK1',
+        '2026-2027',
+        'P.C201',
+        N'Thứ 3 - Tiết 1 đến 3',
+        40,
+        '2026-08-11',
+        '2026-12-11',
+        'OPEN'
+    FROM dbo.Courses c
+    CROSS JOIN dbo.Teachers t
+    WHERE c.course_code = 'WEB01'
+      AND t.teacher_code = 'GV001';
+END;
+GO
+
+/* LỚP SPRING BOOT */
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM dbo.CourseClasses
+    WHERE class_code = 'SPRING01-01'
+)
+BEGIN
+    INSERT INTO dbo.CourseClasses
+    (
+        class_code,
+        course_id,
+        teacher_id,
+        semester,
+        school_year,
+        room,
+        schedule_text,
+        maximum_students,
+        start_date,
+        end_date,
+        status
+    )
+    SELECT
+        'SPRING01-01',
+        c.course_id,
+        t.teacher_id,
+        'HK1',
+        '2026-2027',
+        'P.C202',
+        N'Thứ 5 - Tiết 4 đến 6',
+        35,
+        '2026-08-13',
+        '2026-12-13',
+        'OPEN'
+    FROM dbo.Courses c
+    CROSS JOIN dbo.Teachers t
+    WHERE c.course_code = 'SPRING01'
+      AND t.teacher_code = 'GV001';
+END;
+GO
+
+/* LỚP PHÂN TÍCH THIẾT KẾ HỆ THỐNG */
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM dbo.CourseClasses
+    WHERE class_code = 'SA01-01'
+)
+BEGIN
+    INSERT INTO dbo.CourseClasses
+    (
+        class_code,
+        course_id,
+        teacher_id,
+        semester,
+        school_year,
+        room,
+        schedule_text,
+        maximum_students,
+        start_date,
+        end_date,
+        status
+    )
+    SELECT
+        'SA01-01',
+        c.course_id,
+        t.teacher_id,
+        'HK1',
+        '2026-2027',
+        'P.D301',
+        N'Thứ 6 - Tiết 7 đến 9',
+        45,
+        '2026-08-14',
+        '2026-12-14',
+        'OPEN'
+    FROM dbo.Courses c
+    CROSS JOIN dbo.Teachers t
+    WHERE c.course_code = 'SA01'
+      AND t.teacher_code = 'GV001';
+END;
+GO
+
+/* =========================================================
+   KIỂM TRA KẾT QUẢ
+   ========================================================= */
+
+SELECT
+    c.course_id,
+    c.course_code,
+    c.course_name,
+    c.credits,
+    c.tuition_fee,
+    c.status
+FROM dbo.Courses c
+WHERE c.course_code IN
+(
+    'WEB01',
+    'SPRING01',
+    'SA01'
+)
+ORDER BY c.course_id;
+GO
+
+SELECT
+    cc.class_id,
+    cc.class_code,
+    c.course_code,
+    c.course_name,
+    t.teacher_code,
+    t.full_name AS teacher_name,
+    cc.schedule_text,
+    cc.room,
+    cc.maximum_students,
+    cc.status
+FROM dbo.CourseClasses cc
+INNER JOIN dbo.Courses c
+    ON c.course_id = cc.course_id
+LEFT JOIN dbo.Teachers t
+    ON t.teacher_id = cc.teacher_id
+WHERE cc.class_code IN
+(
+    'WEB01-01',
+    'SPRING01-01',
+    'SA01-01'
+)
+ORDER BY cc.class_id;
+GO

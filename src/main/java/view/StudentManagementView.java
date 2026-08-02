@@ -14,6 +14,7 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPasswordField;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
@@ -39,13 +40,21 @@ import java.util.regex.Pattern;
 
 public class StudentManagementView extends JPanel {
 
-    private static final String ACTIVE_STATUS = "ACTIVE";
-    private static final String INACTIVE_STATUS = "INACTIVE";
+    private static final String ACTIVE_STATUS =
+            "ACTIVE";
+
+    private static final String INACTIVE_STATUS =
+            "INACTIVE";
 
     private final StudentController controller;
 
     private JTextField txtStudentId;
     private JTextField txtStudentCode;
+
+    private JTextField txtUsername;
+    private JPasswordField txtPassword;
+    private JPasswordField txtConfirmPassword;
+
     private JTextField txtFullName;
     private JTextField txtDateOfBirth;
     private JComboBox<String> cboGender;
@@ -67,16 +76,22 @@ public class StudentManagementView extends JPanel {
 
     private JLabel resultLabel;
     private JLabel totalStudentLabel;
+    private JLabel accountHintLabel;
 
     private boolean loading;
 
     public StudentManagementView() {
-        controller = new StudentController();
+        controller =
+                new StudentController();
 
         initializeView();
         registerEvents();
         loadStudents();
     }
+
+    /* =====================================================
+       KHỞI TẠO VIEW
+       ===================================================== */
 
     private void initializeView() {
         setLayout(
@@ -87,7 +102,9 @@ public class StudentManagementView extends JPanel {
                 )
         );
 
-        setBackground(UIConstants.BACKGROUND);
+        setBackground(
+                UIConstants.BACKGROUND
+        );
 
         add(
                 createPageHeader(),
@@ -105,30 +122,37 @@ public class StudentManagementView extends JPanel {
         );
     }
 
+    /* =====================================================
+       HEADER
+       ===================================================== */
+
     private JPanel createPageHeader() {
-        JPanel panel = new JPanel(
-                new MigLayout(
-                        "fillx, insets 0",
-                        "[grow, fill]12[300!, fill]8[]",
-                        "[center]"
-                )
-        );
+        JPanel panel =
+                new JPanel(
+                        new MigLayout(
+                                "fillx, insets 0",
+                                "[grow, fill]12[300!, fill]8[]",
+                                "[center]"
+                        )
+                );
 
         panel.setOpaque(false);
 
-        JPanel titlePanel = new JPanel(
-                new MigLayout(
-                        "insets 0, wrap 1",
-                        "[grow]",
-                        "[]2[]"
-                )
-        );
+        JPanel titlePanel =
+                new JPanel(
+                        new MigLayout(
+                                "insets 0, wrap 1",
+                                "[grow]",
+                                "[]2[]"
+                        )
+                );
 
         titlePanel.setOpaque(false);
 
-        JLabel titleLabel = new JLabel(
-                "Quản lý học viên"
-        );
+        JLabel titleLabel =
+                new JLabel(
+                        "Quản lý học viên"
+                );
 
         titleLabel.setFont(
                 UIConstants.FONT_TITLE
@@ -138,9 +162,10 @@ public class StudentManagementView extends JPanel {
                 UIConstants.TEXT_PRIMARY
         );
 
-        JLabel subtitleLabel = new JLabel(
-                "Quản lý hồ sơ và trạng thái học viên trong hệ thống"
-        );
+        JLabel subtitleLabel =
+                new JLabel(
+                        "Quản lý tài khoản đăng nhập và hồ sơ học viên"
+                );
 
         subtitleLabel.setFont(
                 UIConstants.FONT_NORMAL
@@ -153,10 +178,14 @@ public class StudentManagementView extends JPanel {
         titlePanel.add(titleLabel);
         titlePanel.add(subtitleLabel);
 
-        txtSearch = new JTextField();
+        txtSearch =
+                new JTextField();
 
         txtSearch.setPreferredSize(
-                new Dimension(300, 38)
+                new Dimension(
+                        300,
+                        38
+                )
         );
 
         txtSearch.putClientProperty(
@@ -181,12 +210,13 @@ public class StudentManagementView extends JPanel {
                 """
         );
 
-        btnRefresh = createButton(
-                "Làm mới",
-                FontAwesomeSolid.SYNC_ALT,
-                Color.WHITE,
-                UIConstants.PRIMARY
-        );
+        btnRefresh =
+                createButton(
+                        "Làm mới",
+                        FontAwesomeSolid.SYNC_ALT,
+                        Color.WHITE,
+                        UIConstants.PRIMARY
+                );
 
         btnRefresh.putClientProperty(
                 "FlatLaf.style",
@@ -197,14 +227,6 @@ public class StudentManagementView extends JPanel {
                 focusWidth: 0;
                 margin: 7,10,7,10;
                 """
-        );
-
-        btnRefresh.addActionListener(
-                event -> {
-                    txtSearch.setText("");
-                    clearForm();
-                    loadStudents();
-                }
         );
 
         panel.add(
@@ -225,6 +247,10 @@ public class StudentManagementView extends JPanel {
         return panel;
     }
 
+    /* =====================================================
+       FORM
+       ===================================================== */
+
     private JPanel createStudentForm() {
         ContentCard container =
                 new ContentCard();
@@ -233,12 +259,17 @@ public class StudentManagementView extends JPanel {
                 new MigLayout(
                         "fillx, wrap 1, insets 18 20",
                         "[grow, fill]",
-                        "[]12[]14[]"
+                        "[]12[]10[]14[]"
                 )
         );
 
         container.add(
                 createFormHeader(),
+                "growx"
+        );
+
+        container.add(
+                createAccountHintPanel(),
                 "growx"
         );
 
@@ -256,19 +287,21 @@ public class StudentManagementView extends JPanel {
     }
 
     private JPanel createFormHeader() {
-        JPanel panel = new JPanel(
-                new MigLayout(
-                        "fillx, insets 0",
-                        "[grow][]",
-                        "[center]"
-                )
-        );
+        JPanel panel =
+                new JPanel(
+                        new MigLayout(
+                                "fillx, insets 0",
+                                "[grow][]",
+                                "[center]"
+                        )
+                );
 
         panel.setOpaque(false);
 
-        JLabel titleLabel = new JLabel(
-                "Thông tin học viên"
-        );
+        JLabel titleLabel =
+                new JLabel(
+                        "Thông tin học viên"
+                );
 
         titleLabel.setFont(
                 UIConstants.FONT_HEADING
@@ -278,9 +311,10 @@ public class StudentManagementView extends JPanel {
                 UIConstants.TEXT_PRIMARY
         );
 
-        JLabel hintLabel = new JLabel(
-                "Chọn một dòng trong bảng để cập nhật"
-        );
+        JLabel hintLabel =
+                new JLabel(
+                        "Tạo tài khoản khi thêm mới; chọn một dòng để cập nhật"
+                );
 
         hintLabel.setFont(
                 UIConstants.FONT_SMALL
@@ -296,143 +330,261 @@ public class StudentManagementView extends JPanel {
         return panel;
     }
 
-    private JPanel createFormFields() {
-        JPanel formPanel = new JPanel(
-                new MigLayout(
-                        "fillx, wrap 4, insets 0",
-                        "[grow, fill][grow, fill][grow, fill][grow, fill]",
-                        "[]5[]11[]5[]11[]5[]"
+    private JPanel createAccountHintPanel() {
+        JPanel panel =
+                new JPanel(
+                        new MigLayout(
+                                "fillx, insets 8 12",
+                                "[grow]",
+                                "[]"
+                        )
+                );
+
+        panel.setBackground(
+                new Color(
+                        239,
+                        246,
+                        255
                 )
         );
 
-        formPanel.setOpaque(false);
-
-        txtStudentId = createTextField();
-        txtStudentId.setEditable(false);
-        txtStudentId.setBackground(
-                new Color(248, 250, 252)
+        panel.putClientProperty(
+                "FlatLaf.style",
+                "arc: 10;"
         );
 
-        txtStudentCode = createTextField();
-        txtFullName = createTextField();
-        txtDateOfBirth = createTextField();
+        accountHintLabel =
+                new JLabel(
+                        "Khi thêm mới: bắt buộc nhập tên đăng nhập, mật khẩu và xác nhận mật khẩu."
+                );
+
+        accountHintLabel.setFont(
+                UIConstants.FONT_SMALL
+        );
+
+        accountHintLabel.setForeground(
+                UIConstants.PRIMARY
+        );
+
+        panel.add(
+                accountHintLabel,
+                "growx"
+        );
+
+        return panel;
+    }
+
+    private JPanel createFormFields() {
+        JPanel formPanel =
+                new JPanel(
+                        new MigLayout(
+                                "fillx, wrap 4, insets 0",
+                                "[grow, fill][grow, fill][grow, fill][grow, fill]",
+                                "[]5[]11[]5[]11[]5[]11[]5[]"
+                        )
+                );
+
+        formPanel.setOpaque(false);
+
+        txtStudentId =
+                createTextField();
+
+        txtStudentId.setEditable(false);
+
+        txtStudentId.setBackground(
+                new Color(
+                        248,
+                        250,
+                        252
+                )
+        );
+
+        txtStudentCode =
+                createTextField();
+
+        txtUsername =
+                createTextField();
+
+        txtPassword =
+                createPasswordField(
+                        "Mật khẩu tối thiểu 6 ký tự"
+                );
+
+        txtConfirmPassword =
+                createPasswordField(
+                        "Nhập lại mật khẩu"
+                );
+
+        txtFullName =
+                createTextField();
+
+        txtDateOfBirth =
+                createTextField();
 
         txtDateOfBirth.putClientProperty(
                 "JTextField.placeholderText",
                 "yyyy-MM-dd"
         );
 
-        cboGender = createComboBox(
-                new String[]{
-                        "Nam",
-                        "Nữ",
-                        "Khác"
-                }
-        );
+        cboGender =
+                createComboBox(
+                        new String[]{
+                                "Nam",
+                                "Nữ",
+                                "Khác"
+                        }
+                );
 
-        txtPhone = createTextField();
-        txtEmail = createTextField();
-        txtAddress = createTextField();
+        txtPhone =
+                createTextField();
 
-        cboStatus = createComboBox(
-                new String[]{
-                        ACTIVE_STATUS,
-                        INACTIVE_STATUS
-                }
+        txtEmail =
+                createTextField();
+
+        txtAddress =
+                createTextField();
+
+        cboStatus =
+                createComboBox(
+                        new String[]{
+                                ACTIVE_STATUS,
+                                INACTIVE_STATUS
+                        }
+                );
+
+        formPanel.add(
+                createFieldLabel(
+                        "ID học viên"
+                )
         );
 
         formPanel.add(
-                createFieldLabel("ID học viên")
+                createFieldLabel(
+                        "Mã học viên *"
+                )
         );
 
         formPanel.add(
-                createFieldLabel("Mã học viên")
+                createFieldLabel(
+                        "Tên đăng nhập *"
+                )
         );
 
         formPanel.add(
-                createFieldLabel("Họ và tên")
-        );
-
-        formPanel.add(
-                createFieldLabel("Ngày sinh")
+                createFieldLabel(
+                        "Mật khẩu *"
+                )
         );
 
         formPanel.add(txtStudentId);
         formPanel.add(txtStudentCode);
+        formPanel.add(txtUsername);
+        formPanel.add(txtPassword);
+
+        formPanel.add(
+                createFieldLabel(
+                        "Xác nhận mật khẩu *"
+                )
+        );
+
+        formPanel.add(
+                createFieldLabel(
+                        "Họ và tên *"
+                )
+        );
+
+        formPanel.add(
+                createFieldLabel(
+                        "Ngày sinh"
+                )
+        );
+
+        formPanel.add(
+                createFieldLabel(
+                        "Giới tính"
+                )
+        );
+
+        formPanel.add(txtConfirmPassword);
         formPanel.add(txtFullName);
         formPanel.add(txtDateOfBirth);
-
-        formPanel.add(
-                createFieldLabel("Giới tính")
-        );
-
-        formPanel.add(
-                createFieldLabel("Số điện thoại")
-        );
-
-        formPanel.add(
-                createFieldLabel("Email")
-        );
-
-        formPanel.add(
-                createFieldLabel("Địa chỉ")
-        );
-
         formPanel.add(cboGender);
+
+        formPanel.add(
+                createFieldLabel(
+                        "Số điện thoại"
+                )
+        );
+
+        formPanel.add(
+                createFieldLabel(
+                        "Email"
+                )
+        );
+
+        formPanel.add(
+                createFieldLabel(
+                        "Địa chỉ"
+                )
+        );
+
+        formPanel.add(
+                createFieldLabel(
+                        "Trạng thái"
+                )
+        );
+
         formPanel.add(txtPhone);
         formPanel.add(txtEmail);
         formPanel.add(txtAddress);
-
-        formPanel.add(
-                createFieldLabel("Trạng thái")
-        );
-
-        formPanel.add(
-                cboStatus,
-                "span 1"
-        );
+        formPanel.add(cboStatus);
 
         return formPanel;
     }
 
     private JPanel createFormButtonPanel() {
-        JPanel buttonPanel = new JPanel(
-                new MigLayout(
-                        "fillx, insets 0",
-                        "[grow]8[]8[]8[]8[]",
-                        "[]"
-                )
-        );
+        JPanel buttonPanel =
+                new JPanel(
+                        new MigLayout(
+                                "fillx, insets 0",
+                                "[grow]8[]8[]8[]8[]",
+                                "[]"
+                        )
+                );
 
         buttonPanel.setOpaque(false);
 
-        btnAdd = createButton(
-                "Thêm mới",
-                FontAwesomeSolid.PLUS,
-                UIConstants.PRIMARY,
-                Color.WHITE
-        );
+        btnAdd =
+                createButton(
+                        "Thêm mới",
+                        FontAwesomeSolid.PLUS,
+                        UIConstants.PRIMARY,
+                        Color.WHITE
+                );
 
-        btnUpdate = createButton(
-                "Cập nhật",
-                FontAwesomeSolid.EDIT,
-                UIConstants.WARNING,
-                Color.WHITE
-        );
+        btnUpdate =
+                createButton(
+                        "Cập nhật",
+                        FontAwesomeSolid.EDIT,
+                        UIConstants.WARNING,
+                        Color.WHITE
+                );
 
-        btnDelete = createButton(
-                "Xóa",
-                FontAwesomeSolid.TRASH_ALT,
-                UIConstants.DANGER,
-                Color.WHITE
-        );
+        btnDelete =
+                createButton(
+                        "Xóa",
+                        FontAwesomeSolid.TRASH_ALT,
+                        UIConstants.DANGER,
+                        Color.WHITE
+                );
 
-        btnClear = createButton(
-                "Nhập lại",
-                FontAwesomeSolid.ERASER,
-                Color.WHITE,
-                UIConstants.TEXT_PRIMARY
-        );
+        btnClear =
+                createButton(
+                        "Nhập lại",
+                        FontAwesomeSolid.ERASER,
+                        Color.WHITE,
+                        UIConstants.TEXT_PRIMARY
+                );
 
         btnClear.putClientProperty(
                 "FlatLaf.style",
@@ -443,22 +595,6 @@ public class StudentManagementView extends JPanel {
                 focusWidth: 0;
                 margin: 7,11,7,11;
                 """
-        );
-
-        btnAdd.addActionListener(
-                event -> addStudent()
-        );
-
-        btnUpdate.addActionListener(
-                event -> updateStudent()
-        );
-
-        btnDelete.addActionListener(
-                event -> deleteStudent()
-        );
-
-        btnClear.addActionListener(
-                event -> clearForm()
         );
 
         buttonPanel.add(
@@ -474,12 +610,19 @@ public class StudentManagementView extends JPanel {
         return buttonPanel;
     }
 
+    /* =====================================================
+       BẢNG HỌC VIÊN
+       ===================================================== */
+
     private JPanel createStudentTablePanel() {
         ContentCard container =
                 new ContentCard();
 
         container.setLayout(
-                new BorderLayout(0, 12)
+                new BorderLayout(
+                        0,
+                        12
+                )
         );
 
         container.setBorder(
@@ -499,7 +642,9 @@ public class StudentManagementView extends JPanel {
         initializeStudentTable();
 
         JScrollPane scrollPane =
-                new JScrollPane(studentTable);
+                new JScrollPane(
+                        studentTable
+                );
 
         scrollPane.setBorder(
                 BorderFactory.createLineBorder(
@@ -519,14 +664,19 @@ public class StudentManagementView extends JPanel {
                 Color.WHITE
         );
 
-        scrollPane.getVerticalScrollBar()
+        scrollPane
+                .getVerticalScrollBar()
                 .setUnitIncrement(16);
 
-        scrollPane.getHorizontalScrollBar()
+        scrollPane
+                .getHorizontalScrollBar()
                 .setUnitIncrement(16);
 
         scrollPane.setMinimumSize(
-                new Dimension(500, 260)
+                new Dimension(
+                        500,
+                        260
+                )
         );
 
         container.add(
@@ -543,19 +693,21 @@ public class StudentManagementView extends JPanel {
     }
 
     private JPanel createTableHeader() {
-        JPanel panel = new JPanel(
-                new MigLayout(
-                        "fillx, insets 0",
-                        "[grow][]",
-                        "[center]"
-                )
-        );
+        JPanel panel =
+                new JPanel(
+                        new MigLayout(
+                                "fillx, insets 0",
+                                "[grow][]",
+                                "[center]"
+                        )
+                );
 
         panel.setOpaque(false);
 
-        JLabel titleLabel = new JLabel(
-                "Danh sách học viên"
-        );
+        JLabel titleLabel =
+                new JLabel(
+                        "Danh sách học viên"
+                );
 
         titleLabel.setFont(
                 UIConstants.FONT_HEADING
@@ -565,9 +717,10 @@ public class StudentManagementView extends JPanel {
                 UIConstants.TEXT_PRIMARY
         );
 
-        totalStudentLabel = new JLabel(
-                "0 học viên"
-        );
+        totalStudentLabel =
+                new JLabel(
+                        "0 học viên"
+                );
 
         totalStudentLabel.setFont(
                 UIConstants.FONT_MEDIUM.deriveFont(
@@ -586,30 +739,34 @@ public class StudentManagementView extends JPanel {
     }
 
     private void initializeStudentTable() {
-        tableModel = new DefaultTableModel(
-                new Object[]{
-                        "ID",
-                        "Mã học viên",
-                        "Họ và tên",
-                        "Ngày sinh",
-                        "Giới tính",
-                        "Email",
-                        "Số điện thoại",
-                        "Địa chỉ",
-                        "Trạng thái"
-                },
-                0
-        ) {
-            @Override
-            public boolean isCellEditable(
-                    int row,
-                    int column
-            ) {
-                return false;
-            }
-        };
+        tableModel =
+                new DefaultTableModel(
+                        new Object[]{
+                                "ID",
+                                "Mã học viên",
+                                "Họ và tên",
+                                "Ngày sinh",
+                                "Giới tính",
+                                "Email",
+                                "Số điện thoại",
+                                "Địa chỉ",
+                                "Trạng thái"
+                        },
+                        0
+                ) {
+                    @Override
+                    public boolean isCellEditable(
+                            int row,
+                            int column
+                    ) {
+                        return false;
+                    }
+                };
 
-        studentTable = new JTable(tableModel);
+        studentTable =
+                new JTable(
+                        tableModel
+                );
 
         studentTable.setRowHeight(42);
         studentTable.setFillsViewportHeight(true);
@@ -634,38 +791,57 @@ public class StudentManagementView extends JPanel {
         );
 
         studentTable.setIntercellSpacing(
-                new Dimension(0, 1)
+                new Dimension(
+                        0,
+                        1
+                )
         );
 
         studentTable.setSelectionBackground(
-                new Color(239, 246, 255)
+                new Color(
+                        239,
+                        246,
+                        255
+                )
         );
 
         studentTable.setSelectionForeground(
                 UIConstants.TEXT_PRIMARY
         );
 
-        studentTable.getTableHeader()
+        studentTable
+                .getTableHeader()
                 .setReorderingAllowed(false);
 
-        studentTable.getTableHeader()
+        studentTable
+                .getTableHeader()
                 .setFont(
                         UIConstants.FONT_MEDIUM.deriveFont(
                                 Font.BOLD
                         )
                 );
 
-        studentTable.getTableHeader()
+        studentTable
+                .getTableHeader()
                 .setPreferredSize(
-                        new Dimension(0, 42)
+                        new Dimension(
+                                0,
+                                42
+                        )
                 );
 
-        studentTable.getTableHeader()
+        studentTable
+                .getTableHeader()
                 .setBackground(
-                        new Color(248, 250, 252)
+                        new Color(
+                                248,
+                                250,
+                                252
+                        )
                 );
 
-        studentTable.getTableHeader()
+        studentTable
+                .getTableHeader()
                 .setForeground(
                         UIConstants.TEXT_PRIMARY
                 );
@@ -699,7 +875,8 @@ public class StudentManagementView extends JPanel {
             int column,
             int width
     ) {
-        studentTable.getColumnModel()
+        studentTable
+                .getColumnModel()
                 .getColumn(column)
                 .setPreferredWidth(width);
     }
@@ -713,16 +890,23 @@ public class StudentManagementView extends JPanel {
         );
 
         int[] centeredColumns = {
-                0, 3, 4, 8
+                0,
+                3,
+                4,
+                8
         };
 
         for (int column : centeredColumns) {
-            studentTable.getColumnModel()
+            studentTable
+                    .getColumnModel()
                     .getColumn(column)
-                    .setCellRenderer(centerRenderer);
+                    .setCellRenderer(
+                            centerRenderer
+                    );
         }
 
-        studentTable.getColumnModel()
+        studentTable
+                .getColumnModel()
                 .getColumn(8)
                 .setCellRenderer(
                         new StatusCellRenderer()
@@ -730,19 +914,21 @@ public class StudentManagementView extends JPanel {
     }
 
     private JPanel createTableFooter() {
-        JPanel panel = new JPanel(
-                new MigLayout(
-                        "fillx, insets 0",
-                        "[grow]",
-                        "[]"
-                )
-        );
+        JPanel panel =
+                new JPanel(
+                        new MigLayout(
+                                "fillx, insets 0",
+                                "[grow]",
+                                "[]"
+                        )
+                );
 
         panel.setOpaque(false);
 
-        resultLabel = new JLabel(
-                "Chưa có học viên"
-        );
+        resultLabel =
+                new JLabel(
+                        "Chưa có học viên"
+                );
 
         resultLabel.setFont(
                 UIConstants.FONT_NORMAL
@@ -760,8 +946,37 @@ public class StudentManagementView extends JPanel {
         return panel;
     }
 
+    /* =====================================================
+       EVENTS
+       ===================================================== */
+
     private void registerEvents() {
-        txtSearch.getDocument()
+        btnRefresh.addActionListener(
+                event -> {
+                    txtSearch.setText("");
+                    clearForm();
+                    loadStudents();
+                }
+        );
+
+        btnAdd.addActionListener(
+                event -> addStudent()
+        );
+
+        btnUpdate.addActionListener(
+                event -> updateStudent()
+        );
+
+        btnDelete.addActionListener(
+                event -> deleteStudent()
+        );
+
+        btnClear.addActionListener(
+                event -> clearForm()
+        );
+
+        txtSearch
+                .getDocument()
                 .addDocumentListener(
                         new DocumentListener() {
                             @Override
@@ -787,7 +1002,8 @@ public class StudentManagementView extends JPanel {
                         }
                 );
 
-        studentTable.getSelectionModel()
+        studentTable
+                .getSelectionModel()
                 .addListSelectionListener(
                         event -> {
                             if (!event.getValueIsAdjusting()) {
@@ -817,6 +1033,10 @@ public class StudentManagementView extends JPanel {
         updateButtonState();
     }
 
+    /* =====================================================
+       LOAD / FILTER
+       ===================================================== */
+
     public void loadStudents() {
         if (loading) {
             return;
@@ -830,7 +1050,8 @@ public class StudentManagementView extends JPanel {
                     controller.getAllStudents();
 
             if (students == null) {
-                students = Collections.emptyList();
+                students =
+                        Collections.emptyList();
             }
 
             for (Student student : students) {
@@ -895,6 +1116,7 @@ public class StudentManagementView extends JPanel {
 
         if (keyword.isEmpty()) {
             tableSorter.setRowFilter(null);
+
         } else {
             tableSorter.setRowFilter(
                     RowFilter.regexFilter(
@@ -920,7 +1142,8 @@ public class StudentManagementView extends JPanel {
                         : studentTable.getRowCount();
 
         totalStudentLabel.setText(
-                totalRows + " học viên"
+                totalRows
+                        + " học viên"
         );
 
         if (totalRows == 0) {
@@ -950,41 +1173,67 @@ public class StudentManagementView extends JPanel {
         }
     }
 
+    /* =====================================================
+       THÊM HỌC VIÊN + TÀI KHOẢN
+       ===================================================== */
+
     private void addStudent() {
         if (!validateForm(false)) {
             return;
         }
 
-        Student student;
-
         try {
-            student = readStudentFromForm();
+            Student student =
+                    readStudentFromForm();
 
-        } catch (IllegalArgumentException exception) {
-            showError(exception.getMessage());
-            return;
-        }
+            String username =
+                    txtUsername
+                            .getText()
+                            .trim();
 
-        try {
+            String password =
+                    new String(
+                            txtPassword.getPassword()
+                    );
+
+            String confirmPassword =
+                    new String(
+                            txtConfirmPassword.getPassword()
+                    );
+
             boolean successful =
-                    controller.addStudent(student);
+                    controller.createStudentAccount(
+                            student,
+                            username,
+                            password,
+                            confirmPassword
+                    );
 
             if (!successful) {
                 showError(
                         "Không thể thêm học viên."
                 );
+
                 return;
             }
 
             JOptionPane.showMessageDialog(
                     this,
-                    "Thêm học viên thành công.",
+                    "Đã tạo tài khoản và hồ sơ học viên thành công.",
                     "Thành công",
                     JOptionPane.INFORMATION_MESSAGE
             );
 
             loadStudents();
             clearForm();
+
+        } catch (
+                IllegalArgumentException
+                | IllegalStateException exception
+        ) {
+            showWarning(
+                    exception.getMessage()
+            );
 
         } catch (RuntimeException exception) {
             showError(
@@ -994,50 +1243,74 @@ public class StudentManagementView extends JPanel {
         }
     }
 
+    /* =====================================================
+       CẬP NHẬT
+       ===================================================== */
+
     private void updateStudent() {
         if (!validateForm(true)) {
             return;
         }
 
-        Student student;
-
         try {
-            student = readStudentFromForm();
+            Student student =
+                    readStudentFromForm();
 
             student.setStudentID(
                     Integer.parseInt(
-                            txtStudentId.getText().trim()
+                            txtStudentId
+                                    .getText()
+                                    .trim()
                     )
             );
 
-        } catch (IllegalArgumentException exception) {
-            showError(
-                    "Thông tin học viên không hợp lệ.",
-                    exception
-            );
-            return;
-        }
+            Student currentStudent =
+                    controller.getStudentById(
+                            student.getStudentID()
+                    );
 
-        try {
+            if (currentStudent == null) {
+                showWarning(
+                        "Không tìm thấy học viên cần cập nhật."
+                );
+
+                return;
+            }
+
+            student.setUserId(
+                    currentStudent.getUserId()
+            );
+
             boolean successful =
-                    controller.updateStudent(student);
+                    controller.updateStudentAndUser(
+                            student
+                    );
 
             if (!successful) {
                 showError(
                         "Không thể cập nhật học viên."
                 );
+
                 return;
             }
 
             JOptionPane.showMessageDialog(
                     this,
-                    "Cập nhật học viên thành công.",
+                    "Cập nhật học viên và tài khoản thành công.",
                     "Thành công",
                     JOptionPane.INFORMATION_MESSAGE
             );
 
             loadStudents();
             clearForm();
+
+        } catch (
+                IllegalArgumentException
+                | IllegalStateException exception
+        ) {
+            showWarning(
+                    exception.getMessage()
+            );
 
         } catch (RuntimeException exception) {
             showError(
@@ -1047,19 +1320,28 @@ public class StudentManagementView extends JPanel {
         }
     }
 
+    /* =====================================================
+       XÓA
+       ===================================================== */
+
     private void deleteStudent() {
         String idText =
-                txtStudentId.getText().trim();
+                txtStudentId
+                        .getText()
+                        .trim();
 
         if (idText.isEmpty()) {
             showWarning(
                     "Vui lòng chọn học viên cần xóa."
             );
+
             return;
         }
 
         String studentName =
-                txtFullName.getText().trim();
+                txtFullName
+                        .getText()
+                        .trim();
 
         int answer =
                 JOptionPane.showConfirmDialog(
@@ -1083,7 +1365,9 @@ public class StudentManagementView extends JPanel {
 
         try {
             int studentId =
-                    Integer.parseInt(idText);
+                    Integer.parseInt(
+                            idText
+                    );
 
             boolean successful =
                     controller.deleteStudent(
@@ -1094,6 +1378,7 @@ public class StudentManagementView extends JPanel {
                 showError(
                         "Không thể xóa học viên."
                 );
+
                 return;
             }
 
@@ -1116,8 +1401,13 @@ public class StudentManagementView extends JPanel {
         }
     }
 
+    /* =====================================================
+       ĐỌC FORM
+       ===================================================== */
+
     private Student readStudentFromForm() {
-        Student student = new Student();
+        Student student =
+                new Student();
 
         student.setStudentCode(
                 txtStudentCode
@@ -1138,13 +1428,16 @@ public class StudentManagementView extends JPanel {
 
         if (!dateText.isEmpty()) {
             student.setDateOfBirth(
-                    Date.valueOf(dateText)
+                    Date.valueOf(
+                            dateText
+                    )
             );
         }
 
         student.setGender(
                 String.valueOf(
-                        cboGender.getSelectedItem()
+                        cboGender
+                                .getSelectedItem()
                 )
         );
 
@@ -1168,12 +1461,17 @@ public class StudentManagementView extends JPanel {
 
         student.setStatus(
                 String.valueOf(
-                        cboStatus.getSelectedItem()
+                        cboStatus
+                                .getSelectedItem()
                 )
         );
 
         return student;
     }
+
+    /* =====================================================
+       VALIDATION
+       ===================================================== */
 
     private boolean validateForm(
             boolean requireId
@@ -1188,6 +1486,7 @@ public class StudentManagementView extends JPanel {
             showWarning(
                     "Vui lòng chọn học viên cần cập nhật."
             );
+
             return false;
         }
 
@@ -1203,6 +1502,50 @@ public class StudentManagementView extends JPanel {
 
             txtStudentCode.requestFocus();
             return false;
+        }
+
+        if (!requireId) {
+            String username =
+                    txtUsername
+                            .getText()
+                            .trim();
+
+            String password =
+                    new String(
+                            txtPassword.getPassword()
+                    );
+
+            String confirmPassword =
+                    new String(
+                            txtConfirmPassword.getPassword()
+                    );
+
+            if (username.isEmpty()) {
+                showWarning(
+                        "Tên đăng nhập không được để trống."
+                );
+
+                txtUsername.requestFocus();
+                return false;
+            }
+
+            if (password.length() < 6) {
+                showWarning(
+                        "Mật khẩu phải có ít nhất 6 ký tự."
+                );
+
+                txtPassword.requestFocus();
+                return false;
+            }
+
+            if (!password.equals(confirmPassword)) {
+                showWarning(
+                        "Mật khẩu xác nhận không khớp."
+                );
+
+                txtConfirmPassword.requestFocus();
+                return false;
+            }
         }
 
         if (
@@ -1226,7 +1569,9 @@ public class StudentManagementView extends JPanel {
 
         if (!dateText.isEmpty()) {
             try {
-                Date.valueOf(dateText);
+                Date.valueOf(
+                        dateText
+                );
 
             } catch (IllegalArgumentException exception) {
                 showWarning(
@@ -1239,16 +1584,18 @@ public class StudentManagementView extends JPanel {
         }
 
         String phone =
-                txtPhone.getText().trim();
+                txtPhone
+                        .getText()
+                        .trim();
 
         if (
                 !phone.isEmpty()
                         && !phone.matches(
-                        "^[0-9+\\s.-]{8,15}$"
+                        "^[0-9]{9,11}$"
                 )
         ) {
             showWarning(
-                    "Số điện thoại không đúng định dạng."
+                    "Số điện thoại phải gồm từ 9 đến 11 chữ số."
             );
 
             txtPhone.requestFocus();
@@ -1256,7 +1603,9 @@ public class StudentManagementView extends JPanel {
         }
 
         String email =
-                txtEmail.getText().trim();
+                txtEmail
+                        .getText()
+                        .trim();
 
         if (
                 !email.isEmpty()
@@ -1277,6 +1626,10 @@ public class StudentManagementView extends JPanel {
         return true;
     }
 
+    /* =====================================================
+       CHỌN DÒNG
+       ===================================================== */
+
     private void fillFormFromSelectedRow() {
         int selectedRow =
                 studentTable.getSelectedRow();
@@ -1291,39 +1644,93 @@ public class StudentManagementView extends JPanel {
                 );
 
         txtStudentId.setText(
-                valueAt(modelRow, 0)
+                valueAt(
+                        modelRow,
+                        0
+                )
         );
 
         txtStudentCode.setText(
-                valueAt(modelRow, 1)
+                valueAt(
+                        modelRow,
+                        1
+                )
         );
 
         txtFullName.setText(
-                valueAt(modelRow, 2)
+                valueAt(
+                        modelRow,
+                        2
+                )
         );
 
         txtDateOfBirth.setText(
-                valueAt(modelRow, 3)
+                valueAt(
+                        modelRow,
+                        3
+                )
         );
 
         cboGender.setSelectedItem(
-                valueAt(modelRow, 4)
+                valueAt(
+                        modelRow,
+                        4
+                )
         );
 
         txtEmail.setText(
-                valueAt(modelRow, 5)
+                valueAt(
+                        modelRow,
+                        5
+                )
         );
 
         txtPhone.setText(
-                valueAt(modelRow, 6)
+                valueAt(
+                        modelRow,
+                        6
+                )
         );
 
         txtAddress.setText(
-                valueAt(modelRow, 7)
+                valueAt(
+                        modelRow,
+                        7
+                )
         );
 
         cboStatus.setSelectedItem(
-                valueAt(modelRow, 8)
+                valueAt(
+                        modelRow,
+                        8
+                )
+        );
+
+        setAccountFieldsForUpdateMode();
+    }
+
+    private void setAccountFieldsForUpdateMode() {
+        txtUsername.setText("");
+        txtPassword.setText("");
+        txtConfirmPassword.setText("");
+
+        txtUsername.setEnabled(false);
+        txtPassword.setEnabled(false);
+        txtConfirmPassword.setEnabled(false);
+
+        accountHintLabel.setText(
+                "Chế độ cập nhật: thông tin tài khoản cơ bản sẽ được đồng bộ; "
+                        + "username và mật khẩu không thay đổi tại đây."
+        );
+    }
+
+    private void setAccountFieldsForCreateMode() {
+        txtUsername.setEnabled(true);
+        txtPassword.setEnabled(true);
+        txtConfirmPassword.setEnabled(true);
+
+        accountHintLabel.setText(
+                "Khi thêm mới: bắt buộc nhập tên đăng nhập, mật khẩu và xác nhận mật khẩu."
         );
     }
 
@@ -1342,9 +1749,18 @@ public class StudentManagementView extends JPanel {
                 : value.toString();
     }
 
+    /* =====================================================
+       CLEAR FORM
+       ===================================================== */
+
     private void clearForm() {
         txtStudentId.setText("");
         txtStudentCode.setText("");
+
+        txtUsername.setText("");
+        txtPassword.setText("");
+        txtConfirmPassword.setText("");
+
         txtFullName.setText("");
         txtDateOfBirth.setText("");
         txtPhone.setText("");
@@ -1352,13 +1768,16 @@ public class StudentManagementView extends JPanel {
         txtAddress.setText("");
 
         cboGender.setSelectedIndex(0);
+
         cboStatus.setSelectedItem(
                 ACTIVE_STATUS
         );
 
         studentTable.clearSelection();
 
+        setAccountFieldsForCreateMode();
         updateButtonState();
+
         txtStudentCode.requestFocus();
     }
 
@@ -1370,21 +1789,42 @@ public class StudentManagementView extends JPanel {
     private void updateButtonState() {
         boolean hasSelection =
                 studentTable != null
-                        && studentTable.getSelectedRow() >= 0
+                        && studentTable
+                        .getSelectedRow() >= 0
                         && !txtStudentId
                         .getText()
                         .isBlank();
 
-        btnUpdate.setEnabled(hasSelection);
-        btnDelete.setEnabled(hasSelection);
+        btnUpdate.setEnabled(
+                hasSelection
+        );
+
+        btnDelete.setEnabled(
+                hasSelection
+        );
+
+        btnAdd.setEnabled(
+                !hasSelection
+        );
+
+        if (!hasSelection) {
+            setAccountFieldsForCreateMode();
+        }
     }
+
+    /* =====================================================
+       COMPONENT HELPERS
+       ===================================================== */
 
     private JTextField createTextField() {
         JTextField textField =
                 new JTextField();
 
         textField.setPreferredSize(
-                new Dimension(0, 36)
+                new Dimension(
+                        0,
+                        36
+                )
         );
 
         textField.putClientProperty(
@@ -1398,14 +1838,48 @@ public class StudentManagementView extends JPanel {
         return textField;
     }
 
+    private JPasswordField createPasswordField(
+            String placeholder
+    ) {
+        JPasswordField field =
+                new JPasswordField();
+
+        field.setPreferredSize(
+                new Dimension(
+                        0,
+                        36
+                )
+        );
+
+        field.putClientProperty(
+                "JTextField.placeholderText",
+                placeholder
+        );
+
+        field.putClientProperty(
+                "FlatLaf.style",
+                """
+                arc: 9;
+                margin: 6,9,6,9;
+                """
+        );
+
+        return field;
+    }
+
     private JComboBox<String> createComboBox(
             String[] values
     ) {
         JComboBox<String> comboBox =
-                new JComboBox<>(values);
+                new JComboBox<>(
+                        values
+                );
 
         comboBox.setPreferredSize(
-                new Dimension(0, 36)
+                new Dimension(
+                        0,
+                        36
+                )
         );
 
         comboBox.putClientProperty(
@@ -1419,7 +1893,10 @@ public class StudentManagementView extends JPanel {
     private JLabel createFieldLabel(
             String text
     ) {
-        JLabel label = new JLabel(text);
+        JLabel label =
+                new JLabel(
+                        text
+                );
 
         label.setFont(
                 UIConstants.FONT_SMALL.deriveFont(
@@ -1440,7 +1917,10 @@ public class StudentManagementView extends JPanel {
             Color background,
             Color foreground
     ) {
-        JButton button = new JButton(text);
+        JButton button =
+                new JButton(
+                        text
+                );
 
         button.setIcon(
                 FontIcon.of(
@@ -1485,6 +1965,10 @@ public class StudentManagementView extends JPanel {
                 : value.trim();
     }
 
+    /* =====================================================
+       THÔNG BÁO
+       ===================================================== */
+
     private void showWarning(
             String message
     ) {
@@ -1509,14 +1993,25 @@ public class StudentManagementView extends JPanel {
 
     private void showError(
             String message,
-            Exception exception
+            Throwable throwable
     ) {
+        Throwable root =
+                throwable;
+
+        while (
+                root != null
+                        && root.getCause() != null
+        ) {
+            root =
+                    root.getCause();
+        }
+
         String detail =
-                exception == null
-                        || exception.getMessage() == null
-                        || exception.getMessage().isBlank()
+                root == null
+                        || root.getMessage() == null
+                        || root.getMessage().isBlank()
                         ? "Không xác định"
-                        : exception.getMessage();
+                        : root.getMessage();
 
         showError(
                 message
@@ -1524,6 +2019,10 @@ public class StudentManagementView extends JPanel {
                         + detail
         );
     }
+
+    /* =====================================================
+       STATUS RENDERER
+       ===================================================== */
 
     private static class StatusCellRenderer
             extends DefaultTableCellRenderer {
@@ -1581,12 +2080,18 @@ public class StudentManagementView extends JPanel {
             );
 
             if (!isSelected) {
-                setBackground(Color.WHITE);
+                setBackground(
+                        Color.WHITE
+                );
 
                 setForeground(
-                        ACTIVE_STATUS.equals(status)
+                        ACTIVE_STATUS.equals(
+                                status
+                        )
                                 ? UIConstants.SUCCESS
-                                : INACTIVE_STATUS.equals(status)
+                                : INACTIVE_STATUS.equals(
+                                status
+                        )
                                 ? UIConstants.DANGER
                                 : UIConstants.TEXT_SECONDARY
                 );

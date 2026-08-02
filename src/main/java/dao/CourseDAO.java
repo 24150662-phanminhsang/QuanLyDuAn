@@ -26,20 +26,23 @@ public class CourseDAO {
                 tuition_fee,
                 status,
                 created_at
-            FROM Courses
+            FROM dbo.Courses
             """;
 
     private static final int SQL_SERVER_FOREIGN_KEY_ERROR = 547;
     private static final int SQL_SERVER_DUPLICATE_KEY_ERROR = 2627;
     private static final int SQL_SERVER_DUPLICATE_INDEX_ERROR = 2601;
 
-    /**
-     * Thêm khóa học mới.
-     */
+    /* =====================================================
+       THÊM KHÓA HỌC
+       ===================================================== */
+
     public boolean addCourse(Course course) {
+        validateCourseForInsert(course);
+
         String sql =
                 """
-                INSERT INTO Courses
+                INSERT INTO dbo.Courses
                 (
                     course_code,
                     course_name,
@@ -73,24 +76,47 @@ public class CourseDAO {
         }
     }
 
-    /**
-     * Lấy toàn bộ khóa học.
-     */
+    /* =====================================================
+       DANH SÁCH KHÓA HỌC
+       ===================================================== */
+
     public List<Course> getAllCourses() {
         String sql =
                 BASE_SELECT
-                        + " ORDER BY course_id DESC";
+                        + """
+                        ORDER BY course_id DESC
+                        """;
 
         return queryList(sql);
     }
 
-    /**
-     * Lấy khóa học theo ID.
-     */
-    public Course getCourseById(int id) {
+    public List<Course> getActiveCourses() {
+        return getCoursesByStatus("ACTIVE");
+    }
+
+    public List<Course> getInactiveCourses() {
+        return getCoursesByStatus("INACTIVE");
+    }
+
+    public List<Course> getArchivedCourses() {
+        return getCoursesByStatus("ARCHIVED");
+    }
+
+    public List<Course> getCoursesByStatus(
+            String status
+    ) {
+        String normalizedStatus =
+                normalizeStatus(status);
+
         String sql =
                 BASE_SELECT
-                        + " WHERE course_id = ?";
+                        + """
+                        WHERE UPPER(status) = ?
+                        ORDER BY created_at DESC, course_id DESC
+                        """;
+
+        List<Course> courses =
+                new ArrayList<>();
 
         try (
                 Connection connection =
@@ -99,139 +125,39 @@ public class CourseDAO {
                 PreparedStatement statement =
                         connection.prepareStatement(sql)
         ) {
-            statement.setInt(1, id);
+            statement.setString(
+                    1,
+                    normalizedStatus
+            );
 
             try (
                     ResultSet resultSet =
                             statement.executeQuery()
             ) {
-                if (resultSet.next()) {
-                    return mapCourse(resultSet);
+                while (resultSet.next()) {
+                    courses.add(
+                            mapCourse(resultSet)
+                    );
                 }
             }
 
-            return null;
+            return courses;
 
         } catch (SQLException exception) {
             throw translateException(
-                    "Không thể tìm khóa học.",
+                    "Không thể tải danh sách khóa học theo trạng thái.",
                     exception
             );
         }
     }
 
-    /**
-     * Giữ lại để tương thích với code cũ.
-     */
-    public Course getCourseByID(int id) {
-        return getCourseById(id);
-    }
-
-    /**
-     * Cập nhật khóa học.
-     */
-    public boolean updateCourse(Course course) {
-        String sql =
-                """
-                UPDATE Courses
-                SET
-                    course_code = ?,
-                    course_name = ?,
-                    description = ?,
-                    credits = ?,
-                    tuition_fee = ?,
-                    status = ?
-                WHERE course_id = ?
-                """;
-
-        try (
-                Connection connection =
-                        DBConnection.getConnection();
-
-                PreparedStatement statement =
-                        connection.prepareStatement(sql)
-        ) {
-            bindCourseData(
-                    statement,
-                    course
-            );
-
-            statement.setInt(
-                    7,
-                    course.getCourseId()
-            );
-
-            return statement.executeUpdate() > 0;
-
-        } catch (SQLException exception) {
-            throw translateException(
-                    "Không thể cập nhật khóa học.",
-                    exception
-            );
-        }
-    }
-
-    /**
-     * Xóa khóa học theo ID.
-     */
-    public boolean deleteCourse(int id) {
-        String sql =
-                """
-                DELETE FROM Courses
-                WHERE course_id = ?
-                """;
-
-        try (
-                Connection connection =
-                        DBConnection.getConnection();
-
-                PreparedStatement statement =
-                        connection.prepareStatement(sql)
-        ) {
-            statement.setInt(1, id);
-
-            return statement.executeUpdate() > 0;
-
-        } catch (SQLException exception) {
-            if (
-                    exception.getErrorCode()
-                            == SQL_SERVER_FOREIGN_KEY_ERROR
-            ) {
-                throw new RuntimeException(
-                        "Không thể xóa khóa học vì khóa học "
-                                + "đang được sử dụng trong lớp học, "
-                                + "đăng ký hoặc dữ liệu liên quan.",
-                        exception
-                );
-            }
-
-            throw translateException(
-                    "Không thể xóa khóa học.",
-                    exception
-            );
-        }
-    }
-
-    /**
-     * Lấy các khóa học đang hoạt động.
-     */
-    public List<Course> getActiveCourses() {
-        String sql =
-                BASE_SELECT
-                        + """
-                         WHERE UPPER(status) = 'ACTIVE'
-                         ORDER BY created_at DESC, course_id DESC
-                         """;
-
-        return queryList(sql);
-    }
-
-    /**
-     * Lấy danh sách khóa học nổi bật.
-     */
     public List<Course> getFeaturedCourses(
             int limit
     ) {
+        if (limit <= 0) {
+            return new ArrayList<>();
+        }
+
         String sql =
                 """
                 SELECT TOP (?)
@@ -243,7 +169,7 @@ public class CourseDAO {
                     tuition_fee,
                     status,
                     created_at
-                FROM Courses
+                FROM dbo.Courses
                 WHERE UPPER(status) = 'ACTIVE'
                 ORDER BY created_at DESC, course_id DESC
                 """;
@@ -260,7 +186,7 @@ public class CourseDAO {
         ) {
             statement.setInt(
                     1,
-                    Math.max(limit, 1)
+                    limit
             );
 
             try (
@@ -284,22 +210,126 @@ public class CourseDAO {
         }
     }
 
-    /**
-     * Tìm kiếm khóa học theo mã, tên, mô tả hoặc trạng thái.
-     */
+    /* =====================================================
+       TÌM KHÓA HỌC
+       ===================================================== */
+
+    public Course getCourseById(
+            int courseId
+    ) {
+        if (courseId <= 0) {
+            return null;
+        }
+
+        String sql =
+                BASE_SELECT
+                        + """
+                        WHERE course_id = ?
+                        """;
+
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
+
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            statement.setInt(
+                    1,
+                    courseId
+            );
+
+            try (
+                    ResultSet resultSet =
+                            statement.executeQuery()
+            ) {
+                if (resultSet.next()) {
+                    return mapCourse(
+                            resultSet
+                    );
+                }
+            }
+
+            return null;
+
+        } catch (SQLException exception) {
+            throw translateException(
+                    "Không thể tìm khóa học.",
+                    exception
+            );
+        }
+    }
+
+    public Course getCourseByID(
+            int courseId
+    ) {
+        return getCourseById(
+                courseId
+        );
+    }
+
+    public Course getCourseByCode(
+            String courseCode
+    ) {
+        if (
+                courseCode == null
+                        || courseCode.isBlank()
+        ) {
+            return null;
+        }
+
+        String sql =
+                BASE_SELECT
+                        + """
+                        WHERE UPPER(course_code) = UPPER(?)
+                        """;
+
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
+
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            statement.setString(
+                    1,
+                    courseCode.trim()
+            );
+
+            try (
+                    ResultSet resultSet =
+                            statement.executeQuery()
+            ) {
+                if (resultSet.next()) {
+                    return mapCourse(
+                            resultSet
+                    );
+                }
+            }
+
+            return null;
+
+        } catch (SQLException exception) {
+            throw translateException(
+                    "Không thể tìm khóa học theo mã.",
+                    exception
+            );
+        }
+    }
+
     public List<Course> searchCourses(
             String keyword
     ) {
         String sql =
                 BASE_SELECT
                         + """
-                         WHERE
-                             course_code LIKE ?
-                             OR course_name LIKE ?
-                             OR description LIKE ?
-                             OR status LIKE ?
-                         ORDER BY course_id DESC
-                         """;
+                        WHERE
+                            course_code LIKE ?
+                            OR course_name LIKE ?
+                            OR COALESCE(description, '') LIKE ?
+                            OR status LIKE ?
+                        ORDER BY course_id DESC
+                        """;
 
         String normalizedKeyword =
                 keyword == null
@@ -345,9 +375,393 @@ public class CourseDAO {
         }
     }
 
-    /**
-     * Thực thi truy vấn không có tham số và trả về danh sách khóa học.
-     */
+    /* =====================================================
+       KIỂM TRA TRÙNG DỮ LIỆU
+       ===================================================== */
+
+    public boolean existsByCourseCode(
+            String courseCode
+    ) {
+        if (
+                courseCode == null
+                        || courseCode.isBlank()
+        ) {
+            return false;
+        }
+
+        String sql =
+                """
+                SELECT COUNT(*) AS total
+                FROM dbo.Courses
+                WHERE UPPER(course_code) = UPPER(?)
+                """;
+
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
+
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            statement.setString(
+                    1,
+                    courseCode.trim()
+            );
+
+            try (
+                    ResultSet resultSet =
+                            statement.executeQuery()
+            ) {
+                return resultSet.next()
+                        && resultSet.getInt(
+                        "total"
+                ) > 0;
+            }
+
+        } catch (SQLException exception) {
+            throw translateException(
+                    "Không thể kiểm tra mã khóa học.",
+                    exception
+            );
+        }
+    }
+
+    public boolean existsByCourseCodeExceptId(
+            String courseCode,
+            int excludedCourseId
+    ) {
+        if (
+                courseCode == null
+                        || courseCode.isBlank()
+        ) {
+            return false;
+        }
+
+        String sql =
+                """
+                SELECT COUNT(*) AS total
+                FROM dbo.Courses
+                WHERE UPPER(course_code) = UPPER(?)
+                  AND course_id <> ?
+                """;
+
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
+
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            statement.setString(
+                    1,
+                    courseCode.trim()
+            );
+
+            statement.setInt(
+                    2,
+                    excludedCourseId
+            );
+
+            try (
+                    ResultSet resultSet =
+                            statement.executeQuery()
+            ) {
+                return resultSet.next()
+                        && resultSet.getInt(
+                        "total"
+                ) > 0;
+            }
+
+        } catch (SQLException exception) {
+            throw translateException(
+                    "Không thể kiểm tra mã khóa học.",
+                    exception
+            );
+        }
+    }
+
+    /* =====================================================
+       KIỂM TRA LIÊN KẾT LỚP HỌC
+       ===================================================== */
+
+    public boolean hasClasses(
+            int courseId
+    ) {
+        if (courseId <= 0) {
+            return false;
+        }
+
+        /*
+         * Database hiện tại sử dụng bảng CourseClasses.
+         */
+        String sql =
+                """
+                SELECT COUNT(*) AS total
+                FROM dbo.CourseClasses
+                WHERE course_id = ?
+                """;
+
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
+
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            statement.setInt(
+                    1,
+                    courseId
+            );
+
+            try (
+                    ResultSet resultSet =
+                            statement.executeQuery()
+            ) {
+                return resultSet.next()
+                        && resultSet.getInt(
+                        "total"
+                ) > 0;
+            }
+
+        } catch (SQLException exception) {
+            throw translateException(
+                    "Không thể kiểm tra lớp học của khóa học.",
+                    exception
+            );
+        }
+    }
+
+    public int countClasses(
+            int courseId
+    ) {
+        if (courseId <= 0) {
+            return 0;
+        }
+
+        String sql =
+                """
+                SELECT COUNT(*) AS total
+                FROM dbo.CourseClasses
+                WHERE course_id = ?
+                """;
+
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
+
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            statement.setInt(
+                    1,
+                    courseId
+            );
+
+            try (
+                    ResultSet resultSet =
+                            statement.executeQuery()
+            ) {
+                return resultSet.next()
+                        ? resultSet.getInt(
+                        "total"
+                )
+                        : 0;
+            }
+
+        } catch (SQLException exception) {
+            throw translateException(
+                    "Không thể đếm số lớp của khóa học.",
+                    exception
+            );
+        }
+    }
+
+    /* =====================================================
+       CẬP NHẬT KHÓA HỌC
+       ===================================================== */
+
+    public boolean updateCourse(
+            Course course
+    ) {
+        validateCourseForUpdate(course);
+
+        String sql =
+                """
+                UPDATE dbo.Courses
+                SET
+                    course_code = ?,
+                    course_name = ?,
+                    description = ?,
+                    credits = ?,
+                    tuition_fee = ?,
+                    status = ?
+                WHERE course_id = ?
+                """;
+
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
+
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            bindCourseData(
+                    statement,
+                    course
+            );
+
+            statement.setInt(
+                    7,
+                    course.getCourseId()
+            );
+
+            return statement.executeUpdate() > 0;
+
+        } catch (SQLException exception) {
+            throw translateException(
+                    "Không thể cập nhật khóa học.",
+                    exception
+            );
+        }
+    }
+
+    public boolean updateStatus(
+            int courseId,
+            String status
+    ) {
+        if (courseId <= 0) {
+            throw new IllegalArgumentException(
+                    "ID khóa học không hợp lệ."
+            );
+        }
+
+        String normalizedStatus =
+                normalizeStatus(status);
+
+        String sql =
+                """
+                UPDATE dbo.Courses
+                SET status = ?
+                WHERE course_id = ?
+                """;
+
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
+
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            statement.setString(
+                    1,
+                    normalizedStatus
+            );
+
+            statement.setInt(
+                    2,
+                    courseId
+            );
+
+            return statement.executeUpdate() > 0;
+
+        } catch (SQLException exception) {
+            throw translateException(
+                    "Không thể cập nhật trạng thái khóa học.",
+                    exception
+            );
+        }
+    }
+
+    public boolean activateCourse(
+            int courseId
+    ) {
+        return updateStatus(
+                courseId,
+                "ACTIVE"
+        );
+    }
+
+    public boolean deactivateCourse(
+            int courseId
+    ) {
+        return updateStatus(
+                courseId,
+                "INACTIVE"
+        );
+    }
+
+    public boolean archiveCourse(
+            int courseId
+    ) {
+        return updateStatus(
+                courseId,
+                "ARCHIVED"
+        );
+    }
+
+    /* =====================================================
+       XÓA KHÓA HỌC
+       ===================================================== */
+
+    public boolean deleteCourse(
+            int courseId
+    ) {
+        if (courseId <= 0) {
+            throw new IllegalArgumentException(
+                    "ID khóa học không hợp lệ."
+            );
+        }
+
+        if (hasClasses(courseId)) {
+            throw new IllegalStateException(
+                    "Không thể xóa khóa học vì khóa học đã có lớp học. "
+                            + "Hãy chuyển khóa học sang trạng thái ARCHIVED."
+            );
+        }
+
+        String sql =
+                """
+                DELETE FROM dbo.Courses
+                WHERE course_id = ?
+                """;
+
+        try (
+                Connection connection =
+                        DBConnection.getConnection();
+
+                PreparedStatement statement =
+                        connection.prepareStatement(sql)
+        ) {
+            statement.setInt(
+                    1,
+                    courseId
+            );
+
+            return statement.executeUpdate() > 0;
+
+        } catch (SQLException exception) {
+            if (
+                    exception.getErrorCode()
+                            == SQL_SERVER_FOREIGN_KEY_ERROR
+            ) {
+                throw new IllegalStateException(
+                        "Không thể xóa khóa học vì khóa học "
+                                + "đang được sử dụng trong dữ liệu liên quan.",
+                        exception
+                );
+            }
+
+            throw translateException(
+                    "Không thể xóa khóa học.",
+                    exception
+            );
+        }
+    }
+
+    /* =====================================================
+       HÀM TRUY VẤN DÙNG CHUNG
+       ===================================================== */
+
     private List<Course> queryList(
             String sql
     ) {
@@ -380,26 +794,23 @@ public class CourseDAO {
         }
     }
 
-    /**
-     * Gán dữ liệu khóa học vào PreparedStatement.
-     *
-     * Dùng chung cho INSERT và UPDATE.
-     */
     private void bindCourseData(
             PreparedStatement statement,
             Course course
     ) throws SQLException {
+
         statement.setString(
                 1,
-                normalizeText(
+                normalizeCourseCode(
                         course.getCourseCode()
                 )
         );
 
         statement.setString(
                 2,
-                normalizeText(
-                        course.getCourseName()
+                normalizeRequiredText(
+                        course.getCourseName(),
+                        "Tên khóa học"
                 )
         );
 
@@ -429,57 +840,215 @@ public class CourseDAO {
         );
     }
 
-    /**
-     * Chuyển một dòng ResultSet thành đối tượng Course.
-     */
     private Course mapCourse(
             ResultSet resultSet
     ) throws SQLException {
-        Course course = new Course();
+
+        Course course =
+                new Course();
 
         course.setCourseId(
-                resultSet.getInt("course_id")
+                resultSet.getInt(
+                        "course_id"
+                )
         );
 
         course.setCourseCode(
-                resultSet.getString("course_code")
+                resultSet.getString(
+                        "course_code"
+                )
         );
 
         course.setCourseName(
-                resultSet.getString("course_name")
+                resultSet.getString(
+                        "course_name"
+                )
         );
 
         course.setDescription(
-                resultSet.getString("description")
+                resultSet.getString(
+                        "description"
+                )
         );
 
         course.setCredits(
-                resultSet.getInt("credits")
+                resultSet.getInt(
+                        "credits"
+                )
         );
 
         course.setTuitionFee(
-                resultSet.getBigDecimal("tuition_fee")
+                resultSet.getBigDecimal(
+                        "tuition_fee"
+                )
         );
 
         course.setStatus(
-                resultSet.getString("status")
+                resultSet.getString(
+                        "status"
+                )
         );
 
         course.setCreatedAt(
-                resultSet.getTimestamp("created_at")
+                resultSet.getTimestamp(
+                        "created_at"
+                )
         );
 
         return course;
     }
 
-    /**
-     * Gán chuỗi có thể null vào câu SQL.
-     */
+    /* =====================================================
+       VALIDATION
+       ===================================================== */
+
+    private void validateCourseForInsert(
+            Course course
+    ) {
+        validateCourseCommon(course);
+    }
+
+    private void validateCourseForUpdate(
+            Course course
+    ) {
+        validateCourseCommon(course);
+
+        if (course.getCourseId() <= 0) {
+            throw new IllegalArgumentException(
+                    "ID khóa học không hợp lệ."
+            );
+        }
+    }
+
+    private void validateCourseCommon(
+            Course course
+    ) {
+        if (course == null) {
+            throw new IllegalArgumentException(
+                    "Thông tin khóa học không được null."
+            );
+        }
+
+        normalizeCourseCode(
+                course.getCourseCode()
+        );
+
+        normalizeRequiredText(
+                course.getCourseName(),
+                "Tên khóa học"
+        );
+
+        if (course.getCredits() <= 0) {
+            throw new IllegalArgumentException(
+                    "Số tín chỉ phải lớn hơn 0."
+            );
+        }
+
+        if (
+                course.getTuitionFee() != null
+                        && course.getTuitionFee()
+                        .signum() < 0
+        ) {
+            throw new IllegalArgumentException(
+                    "Học phí không được âm."
+            );
+        }
+
+        normalizeStatus(
+                course.getStatus()
+        );
+    }
+
+    /* =====================================================
+       CHUẨN HÓA DỮ LIỆU
+       ===================================================== */
+
+    private String normalizeCourseCode(
+            String courseCode
+    ) {
+        if (
+                courseCode == null
+                        || courseCode.isBlank()
+        ) {
+            throw new IllegalArgumentException(
+                    "Mã khóa học không được để trống."
+            );
+        }
+
+        return courseCode
+                .trim()
+                .toUpperCase(
+                        Locale.ROOT
+                );
+    }
+
+    private String normalizeRequiredText(
+            String value,
+            String fieldName
+    ) {
+        if (
+                value == null
+                        || value.isBlank()
+        ) {
+            throw new IllegalArgumentException(
+                    fieldName
+                            + " không được để trống."
+            );
+        }
+
+        return value.trim();
+    }
+
+    private String normalizeStatus(
+            String status
+    ) {
+        if (
+                status == null
+                        || status.isBlank()
+        ) {
+            return "ACTIVE";
+        }
+
+        String normalized =
+                status.trim()
+                        .toUpperCase(
+                                Locale.ROOT
+                        );
+
+        return switch (normalized) {
+            case "ACTIVE",
+                 "OPEN" ->
+                    "ACTIVE";
+
+            case "INACTIVE",
+                 "CLOSED" ->
+                    "INACTIVE";
+
+            case "ARCHIVED" ->
+                    "ARCHIVED";
+
+            default ->
+                    throw new IllegalArgumentException(
+                            "Trạng thái khóa học không hợp lệ: "
+                                    + status
+                    );
+        };
+    }
+
+    private BigDecimal safeMoney(
+            BigDecimal value
+    ) {
+        return value == null
+                ? BigDecimal.ZERO
+                : value;
+    }
+
     private void setNullableString(
             PreparedStatement statement,
             int parameterIndex,
             String value
     ) throws SQLException {
+
         if (
                 value == null
                         || value.isBlank()
@@ -496,45 +1065,10 @@ public class CourseDAO {
         }
     }
 
-    private String normalizeText(
-            String value
-    ) {
-        return value == null
-                ? ""
-                : value.trim();
-    }
+    /* =====================================================
+       XỬ LÝ LỖI SQL
+       ===================================================== */
 
-    /**
-     * Tránh học phí bị null.
-     */
-    private BigDecimal safeMoney(
-            BigDecimal value
-    ) {
-        return value == null
-                ? BigDecimal.ZERO
-                : value;
-    }
-
-    /**
-     * Tránh trạng thái bị null hoặc rỗng.
-     */
-    private String normalizeStatus(
-            String status
-    ) {
-        if (
-                status == null
-                        || status.isBlank()
-        ) {
-            return "ACTIVE";
-        }
-
-        return status.trim()
-                .toUpperCase(Locale.ROOT);
-    }
-
-    /**
-     * Chuyển lỗi SQL thành thông báo dễ hiểu hơn.
-     */
     private RuntimeException translateException(
             String defaultMessage,
             SQLException exception
@@ -548,9 +1082,20 @@ public class CourseDAO {
                         || errorCode
                         == SQL_SERVER_DUPLICATE_INDEX_ERROR
         ) {
-            return new RuntimeException(
+            return new IllegalArgumentException(
                     "Mã khóa học đã tồn tại. "
                             + "Vui lòng sử dụng mã khác.",
+                    exception
+            );
+        }
+
+        if (
+                errorCode
+                        == SQL_SERVER_FOREIGN_KEY_ERROR
+        ) {
+            return new IllegalStateException(
+                    "Dữ liệu khóa học đang được sử dụng "
+                            + "bởi bảng khác trong hệ thống.",
                     exception
             );
         }
@@ -562,5 +1107,4 @@ public class CourseDAO {
                 exception
         );
     }
-
 }

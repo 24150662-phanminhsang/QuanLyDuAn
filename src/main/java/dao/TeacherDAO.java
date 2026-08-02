@@ -1,80 +1,82 @@
 package dao;
 
+import model.Teacher;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
-import model.Teacher;
 
 public interface TeacherDAO {
 
-    /**
-     * Thêm giảng viên bằng kết nối riêng.
-     */
+    /* =====================================================
+       THÊM / CẬP NHẬT
+       ===================================================== */
+
     boolean insert(Teacher teacher);
 
-    /**
-     * Thêm giảng viên trong transaction hiện tại.
-     *
-     * Dùng cho luồng:
-     * Users + Teachers + EmailVerifications.
-     *
-     * @return teacher_id vừa tạo
-     */
     int insert(
             Connection connection,
             Teacher teacher
     ) throws SQLException;
 
-    /**
-     * Cập nhật hồ sơ giảng viên.
-     */
     boolean update(Teacher teacher);
 
-    /**
-     * Cập nhật hồ sơ trong transaction hiện tại.
-     */
     boolean update(
             Connection connection,
             Teacher teacher
     ) throws SQLException;
 
-    /**
-     * Xóa giảng viên.
-     */
     boolean delete(int teacherId);
 
-    /**
-     * Tìm giảng viên theo teacher_id.
-     */
+    /* =====================================================
+       TÌM KIẾM
+       ===================================================== */
+
     Teacher getById(int teacherId);
 
-    /**
-     * Tìm giảng viên theo user_id.
-     */
     Teacher getByUserId(int userId);
 
-    /**
-     * Tìm giảng viên theo mã giảng viên.
-     */
     Teacher getByCode(String teacherCode);
 
-    /**
-     * Kiểm tra mã giảng viên đã tồn tại.
-     */
-    boolean existsByTeacherCode(String teacherCode);
-
-    /**
-     * Kiểm tra tài khoản đã có hồ sơ giảng viên.
-     */
-    boolean existsByUserId(int userId);
-
-    /**
-     * Lấy toàn bộ danh sách giảng viên.
-     */
     List<Teacher> getAll();
 
-    /**
-     * Tìm kiếm giảng viên.
-     */
     List<Teacher> search(String keyword);
+
+    List<Teacher> getByStatus(String status);
+
+    /* =====================================================
+       KIỂM TRA TỒN TẠI
+       ===================================================== */
+
+    boolean existsByTeacherCode(String teacherCode);
+
+    boolean existsByTeacherCodeExceptId(
+            String teacherCode,
+            int excludedTeacherId
+    );
+
+    boolean existsByUserId(int userId);
+
+    /* =====================================================
+       TRẠNG THÁI GIẢNG VIÊN
+       ===================================================== */
+
+    boolean updateStatus(
+            int teacherId,
+            String status
+    );
+
+    boolean activateTeacher(int teacherId);
+
+    boolean deactivateTeacher(int teacherId);
+
+    /* =====================================================
+       KIỂM TRA LỚP PHỤ TRÁCH
+       ===================================================== */
+
+    boolean hasAssignedClasses(int teacherId);
+
+    int countAssignedClasses(int teacherId);
+
+    int countActiveClasses(int teacherId);
 }

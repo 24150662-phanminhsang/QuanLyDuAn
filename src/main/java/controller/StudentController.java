@@ -1,167 +1,371 @@
 package controller;
 
-import dao.StudentDAO;
 import model.Student;
+import service.StudentService;
 
 import java.util.Collections;
 import java.util.List;
 
 public class StudentController {
 
-    private final StudentDAO studentDAO;
+    private final StudentService studentService;
 
     public StudentController() {
-        this.studentDAO = new StudentDAO();
+        this(
+                new StudentService()
+        );
     }
+
+    public StudentController(
+            StudentService studentService
+    ) {
+        if (studentService == null) {
+            throw new IllegalArgumentException(
+                    "StudentService không được null."
+            );
+        }
+
+        this.studentService =
+                studentService;
+    }
+
+    /* =====================================================
+       TẠO TÀI KHOẢN VÀ HỒ SƠ HỌC VIÊN
+       ===================================================== */
+
+    public boolean createStudentAccount(
+            Student student,
+            String username,
+            String password,
+            String confirmPassword
+    ) {
+        try {
+            return studentService
+                    .createStudentAccount(
+                            student,
+                            username,
+                            password,
+                            confirmPassword
+                    );
+
+        } catch (
+                IllegalArgumentException
+                | IllegalStateException exception
+        ) {
+            throw exception;
+
+        } catch (RuntimeException exception) {
+            throw new RuntimeException(
+                    "Không thể tạo tài khoản học viên.",
+                    exception
+            );
+        }
+    }
+
+    /* =====================================================
+       THÊM HỒ SƠ CŨ
+       ===================================================== */
+
+    public boolean addStudent(
+            Student student
+    ) {
+        try {
+            return studentService.addStudent(
+                    student
+            );
+
+        } catch (
+                IllegalArgumentException
+                | IllegalStateException exception
+        ) {
+            throw exception;
+
+        } catch (RuntimeException exception) {
+            throw new RuntimeException(
+                    "Không thể thêm học viên.",
+                    exception
+            );
+        }
+    }
+
+    /* =====================================================
+       DANH SÁCH VÀ TÌM KIẾM
+       ===================================================== */
 
     public List<Student> getAllStudents() {
         try {
-            List<Student> students = studentDAO.getAllStudents();
+            List<Student> students =
+                    studentService.getAllStudents();
 
             return students == null
                     ? Collections.emptyList()
                     : students;
 
-        } catch (RuntimeException e) {
+        } catch (RuntimeException exception) {
             throw new RuntimeException(
                     "Không thể tải danh sách học viên.",
-                    e
+                    exception
             );
         }
     }
 
-    public Student getStudentById(int studentId) {
-        validateStudentId(studentId);
+    public List<Student> searchStudents(
+            String keyword
+    ) {
+        try {
+            List<Student> students =
+                    studentService.searchStudents(
+                            keyword
+                    );
+
+            return students == null
+                    ? Collections.emptyList()
+                    : students;
+
+        } catch (RuntimeException exception) {
+            throw new RuntimeException(
+                    "Không thể tìm kiếm học viên.",
+                    exception
+            );
+        }
+    }
+
+    /* =====================================================
+       TÌM HỌC VIÊN
+       ===================================================== */
+
+    public Student getStudentByID(
+            int studentId
+    ) {
+        validatePositiveId(
+                studentId,
+                "ID học viên"
+        );
 
         try {
-            return studentDAO.getStudentById(studentId);
+            return studentService.getStudentByID(
+                    studentId
+            );
 
-        } catch (RuntimeException e) {
+        } catch (RuntimeException exception) {
             throw new RuntimeException(
                     "Không thể lấy thông tin học viên.",
-                    e
+                    exception
             );
         }
     }
 
-    public Student getStudentByCode(String studentCode) {
-        if (studentCode == null || studentCode.isBlank()) {
-            throw new IllegalArgumentException(
-                    "Mã học viên không được để trống."
-            );
+    public Student getStudentById(
+            int studentId
+    ) {
+        return getStudentByID(
+                studentId
+        );
+    }
+
+    public Student getStudentByCode(
+            String studentCode
+    ) {
+        if (
+                studentCode == null
+                        || studentCode.isBlank()
+        ) {
+            return null;
         }
 
         try {
-            return studentDAO.getStudentByCode(
+            return studentService.getStudentByCode(
                     studentCode.trim()
             );
 
-        } catch (RuntimeException e) {
+        } catch (RuntimeException exception) {
             throw new RuntimeException(
-                    "Không thể tìm học viên theo mã.",
-                    e
+                    "Không thể lấy học viên theo mã.",
+                    exception
             );
         }
     }
 
-    public List<Student> searchStudents(String keyword) {
+    public Student getStudentByUserId(
+            int userId
+    ) {
+        validatePositiveId(
+                userId,
+                "ID tài khoản"
+        );
+
         try {
-            List<Student> students =
-                    studentDAO.searchStudents(keyword);
+            return studentService.getStudentByUserId(
+                    userId
+            );
 
-            return students == null
-                    ? Collections.emptyList()
-                    : students;
-
-        } catch (RuntimeException e) {
+        } catch (RuntimeException exception) {
             throw new RuntimeException(
-                    "Không thể tìm kiếm học viên.",
-                    e
+                    "Không thể lấy học viên theo tài khoản.",
+                    exception
             );
         }
     }
 
-    public boolean addStudent(Student student) {
-        validateStudent(student, false);
+    /* =====================================================
+       CẬP NHẬT HỌC VIÊN
+       ===================================================== */
 
+    public boolean updateStudent(
+            Student student
+    ) {
         try {
-            return studentDAO.addStudent(student);
-
-        } catch (RuntimeException e) {
-            throw new RuntimeException(
-                    "Không thể thêm học viên.",
-                    e
+            return studentService.updateStudent(
+                    student
             );
-        }
-    }
 
-    public boolean updateStudent(Student student) {
-        validateStudent(student, true);
+        } catch (
+                IllegalArgumentException
+                | IllegalStateException exception
+        ) {
+            throw exception;
 
-        try {
-            return studentDAO.updateStudent(student);
-
-        } catch (RuntimeException e) {
+        } catch (RuntimeException exception) {
             throw new RuntimeException(
                     "Không thể cập nhật học viên.",
-                    e
+                    exception
             );
         }
     }
 
-    public boolean deleteStudent(int studentId) {
-        validateStudentId(studentId);
+    public boolean updateStudentAndUser(
+            Student student
+    ) {
+        try {
+            return studentService
+                    .updateStudentAndUser(
+                            student
+                    );
+
+        } catch (
+                IllegalArgumentException
+                | IllegalStateException exception
+        ) {
+            throw exception;
+
+        } catch (RuntimeException exception) {
+            throw new RuntimeException(
+                    "Không thể cập nhật học viên và tài khoản.",
+                    exception
+            );
+        }
+    }
+
+    /* =====================================================
+       ĐỔI MẬT KHẨU
+       ===================================================== */
+
+    public boolean resetStudentPassword(
+            int studentId,
+            String newPassword,
+            String confirmPassword
+    ) {
+        validatePositiveId(
+                studentId,
+                "ID học viên"
+        );
 
         try {
-            return studentDAO.deleteStudent(studentId);
+            return studentService
+                    .resetStudentPassword(
+                            studentId,
+                            newPassword,
+                            confirmPassword
+                    );
 
-        } catch (RuntimeException e) {
+        } catch (
+                IllegalArgumentException
+                | IllegalStateException exception
+        ) {
+            throw exception;
+
+        } catch (RuntimeException exception) {
+            throw new RuntimeException(
+                    "Không thể đổi mật khẩu học viên.",
+                    exception
+            );
+        }
+    }
+
+    /* =====================================================
+       XÓA HỌC VIÊN
+       ===================================================== */
+
+    public boolean deleteStudent(
+            int studentId
+    ) {
+        validatePositiveId(
+                studentId,
+                "ID học viên"
+        );
+
+        try {
+            return studentService.deleteStudent(
+                    studentId
+            );
+
+        } catch (
+                IllegalArgumentException
+                | IllegalStateException exception
+        ) {
+            throw exception;
+
+        } catch (RuntimeException exception) {
             throw new RuntimeException(
                     "Không thể xóa học viên.",
-                    e
+                    exception
             );
         }
     }
 
-    private void validateStudent(
-            Student student,
-            boolean requireId
+    /* =====================================================
+       KIỂM TRA TỒN TẠI
+       ===================================================== */
+
+    public boolean existsByStudentCode(
+            String studentCode
     ) {
-        if (student == null) {
-            throw new IllegalArgumentException(
-                    "Thông tin học viên không được null."
-            );
-        }
-
-        if (requireId && student.getStudentID() <= 0) {
-            throw new IllegalArgumentException(
-                    "ID học viên không hợp lệ."
-            );
-        }
-
         if (
-                student.getStudentCode() == null
-                        || student.getStudentCode().isBlank()
+                studentCode == null
+                        || studentCode.isBlank()
         ) {
-            throw new IllegalArgumentException(
-                    "Mã học viên không được để trống."
-            );
+            return false;
         }
 
-        if (
-                student.getFullName() == null
-                        || student.getFullName().isBlank()
-        ) {
-            throw new IllegalArgumentException(
-                    "Họ và tên học viên không được để trống."
-            );
-        }
+        return studentService.existsByStudentCode(
+                studentCode.trim()
+        );
     }
 
-    private void validateStudentId(int studentId) {
-        if (studentId <= 0) {
+    public boolean existsByUserId(
+            int userId
+    ) {
+        if (userId <= 0) {
+            return false;
+        }
+
+        return studentService.existsByUserId(
+                userId
+        );
+    }
+
+    /* =====================================================
+       VALIDATION
+       ===================================================== */
+
+    private void validatePositiveId(
+            int id,
+            String fieldName
+    ) {
+        if (id <= 0) {
             throw new IllegalArgumentException(
-                    "ID học viên phải lớn hơn 0."
+                    fieldName
+                            + " phải lớn hơn 0."
             );
         }
     }

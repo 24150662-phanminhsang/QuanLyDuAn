@@ -38,6 +38,7 @@ public class LandingPageView extends JFrame {
             new Color(10, 29, 58);
 
     private final Runnable loginAction;
+    private final Runnable registerAction;
 
     private JScrollPane scrollPane;
     private ScrollableContentPanel mainContent;
@@ -51,8 +52,12 @@ public class LandingPageView extends JFrame {
     private JPanel courseCardsPanel;
     private JLabel courseStatusLabel;
 
-    public LandingPageView(Runnable loginAction) {
+    public LandingPageView(
+            Runnable loginAction,
+            Runnable registerAction
+    ) {
         this.loginAction = loginAction;
+        this.registerAction = registerAction;
 
         initializeFrame();
         initializeUI();
@@ -178,6 +183,17 @@ public class LandingPageView extends JFrame {
                 BorderLayout.CENTER
         );
 
+        JButton registerButton =
+                createOutlineButton("Đăng ký");
+
+        registerButton.setPreferredSize(
+                new Dimension(120, 38)
+        );
+
+        registerButton.addActionListener(
+                event -> openRegister()
+        );
+
         JButton loginButton =
                 createPrimaryButton("Đăng nhập");
 
@@ -189,14 +205,22 @@ public class LandingPageView extends JFrame {
                 event -> openLogin()
         );
 
-        JPanel loginWrapper =
-                new JPanel(new GridBagLayout());
+        JPanel actionPanel =
+                new JPanel(
+                        new FlowLayout(
+                                FlowLayout.RIGHT,
+                                10,
+                                0
+                        )
+                );
 
-        loginWrapper.setOpaque(false);
-        loginWrapper.add(loginButton);
+        actionPanel.setOpaque(false);
+
+        actionPanel.add(registerButton);
+        actionPanel.add(loginButton);
 
         header.add(
-                loginWrapper,
+                actionPanel,
                 BorderLayout.EAST
         );
 
@@ -1566,6 +1590,15 @@ public class LandingPageView extends JFrame {
             setVisible(false);
         }
     }
+    private void openRegister() {
+
+        if (registerAction != null) {
+
+            registerAction.run();
+
+            setVisible(false);
+        }
+    }
 
     private void scrollTo(
             JPanel target
@@ -1964,4 +1997,5 @@ public class LandingPageView extends JFrame {
             graphics2D.dispose();
         }
     }
+
 }
